@@ -1,0 +1,201 @@
+/*
+ ********************************************
+ *░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░*
+ *░░█▀█░█░░░█░█░█▀▀░░░█░█░█░░░▀█▀░█▀▄░█▀█░░*
+ *░░█▀▀░█░░░█░█░▀▀█░░░█░█░█░░░░█░░█▀▄░█▀█░░*
+ *░░▀░░░▀▀▀░▀▀▀░▀▀▀░░░▀▀▀░▀▀▀░░▀░░▀░▀░▀░▀░░*
+ *░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░*
+ ********************************************
+ */
+@import "mocha.css";
+
+* {
+  border: none;
+  border-radius: 0;
+  font-family: DejaVuSansM Nerd Font;
+  font-size: 15px;
+  min-height: 24px;
+}
+
+tooltip {
+  background-color: rgba(0, 0, 0, 0.5);
+  text-shadow: none;
+  border-radius: 10px;
+  font-family: ComicShannsMono Nerd Font;
+}
+
+window#waybar {
+  background: transparent;
+}
+
+window#waybar.hidden {
+  opacity: 0.2;
+}
+
+/* window#waybar.firefox #window { */
+/*   color: @surface0; */
+/*   background: @peach; */
+/* } */
+
+window#waybar.empty #window {
+  background: transparent;
+}
+
+#window {
+  margin-top: 4px;
+  margin-bottom: 4px;
+  border-radius: 26px;
+  padding-left: 12px;
+  padding-right: 12px;
+  transition: none;
+  /*
+    color: #f8f8f2;
+	background: #282a36;
+    */
+  /* color: @text0; */
+  /* background: @surface0; */
+  color: @surface0;
+  background: @peach;
+  font-family: ComicShannsMono Nerd Font;
+  font-size: 15px;
+}
+
+#workspaces {
+  margin-top: 4px;
+  margin-bottom: 4px;
+  border-radius: 26px;
+  /* background: #282a36; */
+  background: @surface0;
+  transition: none;
+}
+
+#workspaces button {
+  transition: none;
+  /* color: #f8f8f2; */
+  color: @text;
+  background: transparent;
+  font-size: 16px;
+}
+
+#workspaces button.focused {
+  /* color: #9aedfe; */
+  color: @red;
+  font-weight: bold;
+}
+
+#workspaces button:hover {
+  transition: none;
+  box-shadow: inherit;
+  text-shadow: inherit;
+  /* color: #ff79c6; */
+  color: @blue;
+}
+
+#scratchpad {
+  margin-top: 4px;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-bottom: 4px;
+  border-radius: 26px;
+  transition: none;
+  color: @surface0;
+  /* background: #234568; */
+  background: @blue;
+}
+
+#network {
+  margin-top: 4px;
+  padding-left: 12px;
+  padding-right: 16px;
+  margin-bottom: 4px;
+  border-radius: 26px;
+  transition: none;
+  /* color: #4d4d4d; */
+  /* background: #bd93f9; */
+  color: @surface0;
+  background: @mauve;
+}
+
+#pulseaudio {
+  margin-top: 4px;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-bottom: 4px;
+  border-radius: 26px;
+  transition: none;
+  /* color: #4d4d4d; */
+  /* background: #9aedfe; */
+  color: @surface0;
+  background: @sky;
+}
+
+#temperature {
+  margin-top: 4px;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-bottom: 4px;
+  border-radius: 26px;
+  transition: none;
+  /* color: #4d4d4d; */
+  /* background: #5af78e; */
+  color: @surface0;
+  background: @green;
+}
+
+#cpuperf {
+  margin-top: 4px;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-bottom: 4px;
+  border-radius: 26px;
+  color: @surface0;
+  background: @yellow;
+}
+
+#memory {
+  margin-top: 4px;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-bottom: 4px;
+  border-radius: 26px;
+  transition: none;
+  /* color: #4d4d4d; */
+  /* background: #ff6e67; */
+  color: @surface0;
+  background: @red;
+}
+
+#battery {
+  margin-top: 4px;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-bottom: 4px;
+  border-radius: 26px;
+  transition: none;
+  color: @surface0;
+  background: @flamingo;
+}
+
+/* #cpuperf { */
+/*   margin-top: 4px; */
+/*   padding-left: 16px; */
+/*   padding-right: 16px; */
+/*   margin-bottom: 4px; */
+/*   border-radius: 26px; */
+/*   transition: none; */
+/*   color: @surface0; */
+/*   background: @flamingo; */
+/* } */
+
+#clock {
+  margin-top: 4px;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-bottom: 4px;
+  border-radius: 26px;
+  transition: none;
+  /* color: #f8f8f2; */
+  /* background: #282a36; */
+  color: @text;
+  background: @surface0;
+}

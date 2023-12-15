@@ -1,0 +1,100 @@
+{
+  "layer": "top",
+    "position": "bottom",
+    "modules-left": ["sway/workspaces", "sway/window"],
+    "modules-center": [],
+    "modules-right": ["sway/scratchpad", "network", "pulseaudio", "temperature", "group/cpuperf", "memory", "battery", "clock"],
+    "group/cpuperf": {
+      "orientation": "horizontal",
+      "modules": [
+        "cpu",
+        "custom/perf"
+      ],
+      "drawer": {
+          "transition-left-to-right": false
+        }
+    },
+    "sway/window": {
+      "format": "{}",
+      "max-length": 50,
+      "rewrite": {
+        "(.*) — Mozilla Firefox": "🌎 $1",
+        "(.*) — zsh": "> [$1]"
+      }
+    },
+    "spacing": 4,
+    "pulseaudio": {
+      "reverse-scrolling": 1,
+      "format": "{volume}% {icon} {format_source}",
+      "format-bluetooth": "{volume}% {icon} {format_source}",
+      "format-bluetooth-muted": "󰋐 {icon} {format_source}",
+      "format-muted": "󰝟 {format_source}",
+      "format-source": "{volume}% ",
+      "format-source-muted": "",
+      "format-icons": {
+        "headphone": "",
+        "hands-free": "󰏴",
+        "headset": "󰋋",
+        "phone": "",
+        "portable": "",
+        "car": "",
+        "default": ["󰕿", "󰖀", "󰕾"]
+      },
+      "on-click": "pavucontrol"
+      //    "__min-length": 13
+    },
+    "sway/scratchpad": {
+      "format": "{icon} {count}",
+      "show-empty": false,
+      "format-icons": ["", ""],
+      "tooltip": true,
+      "tooltip-format": "{app}: {title}"
+    },
+    "network": {
+      "tooltip": true,
+      "format-wifi": "󰖩",
+      "format-ethernet": "󰈁",
+      "format-disconnected": "󰌙",
+      "tooltip-format": "{essid} {ipaddr} ({signalStrength}%)",
+      "tooltip-format-ethernet": "{ifname}",
+      "tooltip-format-disconnected": "disconnected"
+    },
+    "cpu": {
+      "interval": 5,
+      "format": " {usage:1}%  󰖡 {load:2}"
+    },
+    "temperature": {
+      "thermal-zone": 30,
+      "hwmon-path": ["/sys/class/hwmon/hwmon2/temp1_input", "/sys/class/thermal/thermal_zone0/temp"],
+      "critical-threshold": 80,
+      "format-critical": "{temperatureC}°C 󰸁",
+      "format": "{temperatureC}°C 󰔏"
+    },
+    "memory": {
+      "tooltip": true,
+      "format": "󰋊 {}%"
+    },
+    "battery": {
+      "states": {
+        "good": 95,
+        "warning": 30,
+        "critical": 15
+      },
+      "format": "{capacity}% {icon}",
+      "format-charging": "{capacity}% 󰃨",
+      "format-plugged": "{capacity}% ",
+      "format-alt": "{time} {icon}",
+      "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+    },
+    "custom/perf": {
+      "format": "{} ",
+      "tooltip": false,
+      "interval": 60,
+      "on-click": "cat /sys/firmware/acpi/platform_profile",
+      "exec": "cat /sys/firmware/acpi/platform_profile"
+    },
+    "clock": {
+      "tooltip-format": "{:%d-%m-%Y | %H:%M:%S}",
+      "format-alt": "{:%a, %d %b %H:%M}"
+    }
+}
