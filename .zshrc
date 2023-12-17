@@ -70,12 +70,20 @@ ZSH_THEME="robbyrussell"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git pass fzf systemd)
+
+plugins=(git pass fzf systemd tmuxinator zsh-interactive-cd zsh-navigation-tools)
+
+# Using highlight (http://www.andre-simon.de/doku/highlight/en/highlight.html)
+export FZF_CTRL_T_OPTS="--preview '(highlight -O ansi -l {} 2> /dev/null || cat {} || tree -C {}) 2> /dev/null | head -200'"
+
+export FZF_ALT_C_OPTS="--preview 'tree -C {} | head -200'"
 
 export FZF_DEFAULT_OPTS=" \
 --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
 --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc \
 --color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
+
+export FZF_TMUX=1
 
 # User configuration
 
@@ -106,6 +114,7 @@ export FZF_DEFAULT_OPTS=" \
 source $ZSH/oh-my-zsh.sh
 source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source $HOME/.dotfiles/fzf-git.sh/fzf-git.sh
 
 
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
