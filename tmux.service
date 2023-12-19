@@ -1,5 +1,6 @@
 [Unit]
 Description=Start tmux in detached session
+After=graphical-session.target
 
 [Service]
 Type=forking
@@ -7,4 +8,4 @@ ExecStart=/usr/bin/tmux new-session -s main -d
 ExecStop=/usr/bin/tmux kill-session -t main
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target
