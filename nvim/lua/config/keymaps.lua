@@ -4,3 +4,4 @@
 vim.keymap.set("n", "]<space>", "o<Esc>k", { silent = true, desc = "Add line below" })
 vim.keymap.set("n", "[<space>", "O<Esc>j", { silent = true, desc = "Add line above" })
 vim.keymap.set("n", "<space>cc", ":ColorizerToggle<Enter>", { silent = true, desc = "Colorizer toggle" })
+vim.keymap.set("n", "<leader>ghB", ":ToggleBlame virtual<Enter>", { silent = true, desc = "Toggle virtual blame" })
