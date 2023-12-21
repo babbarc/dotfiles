@@ -71,7 +71,7 @@ ZSH_THEME="robbyrussell"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 
-plugins=(git pass fzf systemd tmuxinator zsh-interactive-cd zsh-navigation-tools)
+plugins=(git pass fzf systemd tmuxinator zsh-interactive-cd zsh-navigation-tools docker docker-compose)
 
 # Using highlight (http://www.andre-simon.de/doku/highlight/en/highlight.html)
 export FZF_CTRL_T_OPTS="--preview '(highlight -O ansi -l {} 2> /dev/null || cat {} || tree -C {}) 2> /dev/null | head -200'"
