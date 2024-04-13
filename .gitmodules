@@ -10,3 +10,6 @@
 [submodule "alacritty/catppuccin"]
 	path = alacritty/catppuccin
 	url = https://github.com/catppuccin/alacritty.git
+[submodule "ohmyzsh"]
+	path = ohmyzsh
+	url = https://github.com/ohmyzsh/ohmyzsh.git
