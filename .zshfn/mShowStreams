@@ -1,0 +1,10 @@
+
+mShowStreams() {
+    if [[ -z $1 ]]; then
+        read ifloc
+    else
+        ifloc=$1
+    fi
+    # ffprobe -show_streams -select_streams a -of json "$ifloc" 2>/dev/null | jq '.streams'
+    ffprobe -show_streams -of json "$ifloc" 2>/dev/null | jq '.streams'
+}

@@ -116,6 +116,8 @@ source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $HOME/.dotfiles/fzf-git.sh/fzf-git.sh
 
+fpath=( ~/.zshfn "${fpath[@]}" )
+autoload -Uz $fpath[1]/*(.:t)
 
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
 export PATH="$PATH:$HOME/.rvm/bin"
