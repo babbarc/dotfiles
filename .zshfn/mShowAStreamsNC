@@ -1,3 +1,4 @@
+#!/bin/zsh
 
 mShowAStreamsNC() {
     # __mmovlist | awk -F "\0" '{cmd="ffprobe -show_streams -of json \""$1"\" 2>/dev/null | jq \".streams | length\"";cmd|getline cnt;close(cmd);cmd="ffprobe -show_streams -select_streams a -of json \""$1"\" 2>/dev/null | jq \".streams | length\"";cmd|getline cnt1;close(cmd);cmd="basename \""$1"\"";cmd|getline mov;close(cmd);print mov,cnt,cnt1}'

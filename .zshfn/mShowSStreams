@@ -1,3 +1,4 @@
+#!/bin/zsh
 
 mShowSStreams() {
     if [[ -z $1 ]]; then
