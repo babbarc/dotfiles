@@ -1,5 +1,5 @@
 #!/bin/zsh
 
 stereo-transcode-cli() {
-    find "$1" -type f -size +200M -print0 | xargs -0 -I % sh -c '{ echo "%" | nc -uc 192.168.0.0 22233; sleep 5; }'
+    curl -X POST -H "Content-Type: application/json" "http://192.168.0.0:3000" -d "{\"fPath\": \"$1\"}"
   }
