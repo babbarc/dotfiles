@@ -6,5 +6,3 @@ vim.filetype.add({
     [".*/waybar/config"] = "jsonc",
   },
 })
-
-vim.g.python3_host_prog = "/usr/bin/python3"
