@@ -22,6 +22,9 @@ set $term alacritty
 # mocha
 set $menu bemenu-run --fb "#1e1e2e" --ff "#cdd6f4" --nb "#1e1e2e" --nf "#cdd6f4" --tb "#1e1e2e" --hb "#1e1e2e" --tf "#f38ba8" --hf "#f9e2af" --nf "#cdd6f4" --af "#cdd6f4" --ab "#1e1e2e" --fn "SauceCodePro Nerd Font Mono 12" --hp 15 -M 20 -H 30 --ch 20 --cw 5 -n -i --prompt ">"
 
+# You preferred file manager
+set $filem thunar
+
 ### Output configuration
 #
 # Default wallpaper (more resolutions are available in /usr/share/backgrounds/sway/)
@@ -102,6 +105,9 @@ bindgesture swipe:right workspace prev_on_output
 
   # start a terminal
   bindsym $mod+Return exec $term
+
+  # start a file manager
+  bindsym $mod+Shift+f exec $filem
 
   # kill focused window
   bindsym $mod+Shift+q kill
