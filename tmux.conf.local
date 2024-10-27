@@ -435,15 +435,16 @@ tmux_conf_uninstall_plugins_on_reload=true
 #set -g @plugin 'tmux-plugins/tmux-continuum'
 #set -g @continuum-restore 'on'
 
-set -g @plugin 'catppuccin/tmux#v2.1.0'
+set -g @plugin 'catppuccin/tmux'
 
 set -g @catppuccin_flavor 'mocha' # latte, frappe, macchiato or mocha
 set -g @catppuccin_window_status_style "slanted"
-set -ogq @catppuccin_window_text " #{pane_current_path}"
-set -ogq @catppuccin_window_current_text " #{pane_current_path}"
+set -g @catppuccin_window_status 'no'
+set -ogq @catppuccin_window_text " #W"
+set -ogq @catppuccin_window_current_text " #W"
 
 set -g status-left ""
-set -g status-right "#{E:@catppuccin_status_application}#{E:@catppuccin_status_session}"
+set -g status-right "#{E:@catppuccin_status_session}"
 
 # -- custom variables ----------------------------------------------------------
 
