@@ -6,6 +6,16 @@
 
 set -g default-shell /usr/bin/zsh
 
+# -- bindings ------------------------------------------------------------------
+
+# preserve tmux stock bindings,
+# while adding bindings that don't conflict with these stock bindings
+# /!\ this disables some of Oh my tmux! bindings described in README.md
+#   - true
+#   - false (default)
+tmux_conf_preserve_stock_bindings=false
+
+
 # -- session creation ----------------------------------------------------------
 
 # prompt for session name when creating a new session, possible values are:
@@ -347,7 +357,13 @@ tmux_conf_theme_clock_style="24"
 #   - disabled
 # on macOS, this requires installing reattach-to-user-namespace, see README.md
 # on Linux, this requires xsel, xclip or wl-copy
-tmux_conf_copy_to_os_clipboard=false
+tmux_conf_copy_to_os_clipboard=true
+
+
+# -- urlscan -------------------------------------------------------------------
+
+# options passed to urlscan
+tmux_conf_urlscan_options="--compact --dedupe"
 
 
 # -- user customizations -------------------------------------------------------
@@ -419,22 +435,15 @@ tmux_conf_uninstall_plugins_on_reload=true
 #set -g @plugin 'tmux-plugins/tmux-continuum'
 #set -g @continuum-restore 'on'
 
-set -g @plugin 'catppuccin/tmux'
-set -g @catppuccin_window_left_separator "█"
-set -g @catppuccin_window_right_separator "█ "
-set -g @catppuccin_window_number_position "right"
-set -g @catppuccin_window_middle_separator "  █"
+set -g @plugin 'catppuccin/tmux#v2.1.0'
 
-set -g @catppuccin_window_default_fill "number"
+set -g @catppuccin_flavor 'mocha' # latte, frappe, macchiato or mocha
+set -g @catppuccin_window_status_style "slanted"
+set -ogq @catppuccin_window_text " #{pane_current_path}"
+set -ogq @catppuccin_window_current_text " #{pane_current_path}"
 
-set -g @catppuccin_window_current_fill "number"
-set -g @catppuccin_window_current_text "#{pane_current_path}"
-
-set -g @catppuccin_status_modules_right "application session"
-set -g @catppuccin_status_left_separator  ""
-set -g @catppuccin_status_right_separator " "
-set -g @catppuccin_status_fill "all"
-set -g @catppuccin_status_connect_separator "yes"
+set -g status-left ""
+set -g status-right "#{E:@catppuccin_status_application}#{E:@catppuccin_status_session}"
 
 # -- custom variables ----------------------------------------------------------
 
