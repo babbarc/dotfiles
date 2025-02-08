@@ -447,8 +447,6 @@ set -ogq @catppuccin_window_current_text " #W"
 set -g status-left ""
 set -g status-right "#{E:@catppuccin_status_session}"
 
-bind-key p send-keys 'selected=$(find "${1:-.}" -type f \( -iname "*.pdf" -o -iname "*.epub" -o -iname "*.mobi" \) | fzf --preview "zathura {} & sleep 1 && swaymsg \"[app_id=Alacritty] focus\"" --preview-window=right,0) && zathura "${selected}"
-
 # -- custom variables ----------------------------------------------------------
 
 # to define a custom #{foo} variable, define a POSIX shell function between the
