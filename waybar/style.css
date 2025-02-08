@@ -28,9 +28,9 @@ window#waybar {
   background: transparent;
 }
 
-window#waybar.hidden {
-  opacity: 0.2;
-}
+/*window#waybar.hidden {*/
+/*  opacity: 0.2;*/
+/*}*/
 
 /* window#waybar.firefox #window { */
 /*   color: @surface0; */
