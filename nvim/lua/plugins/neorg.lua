@@ -1,11 +1,13 @@
 return {
   {
     "vhyrro/luarocks.nvim",
+    enabled = false,
     priority = 1000,
     config = true,
   },
   {
     "nvim-neorg/neorg",
+    enabled = false,
     dependencies = { "luarocks.nvim" },
     version = "*",
     -- config = true,
@@ -37,8 +39,9 @@ return {
               workspaces = {
                 notes = "~/notes/notes",
                 work = "~/notes/work",
+                gtd = "~/notes/gtd",
               },
-              default_workspace = "work",
+              default_workspace = "gtd",
             },
           },
         },
