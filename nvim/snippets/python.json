@@ -1,0 +1,7 @@
+{
+  "Python TODO": {
+    "prefix": "todo",
+    "body": ["# TODO: ${1:Describe the task here}"],
+    "description": "Insert a TODO comment with your name and date"
+  }
+}

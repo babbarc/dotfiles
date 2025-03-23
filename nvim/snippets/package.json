@@ -7,6 +7,12 @@
           "all"
         ],
         "path": "./all.json"
+      },
+      {
+        "language": [
+          "python"
+        ],
+        "path": "./python.json"
       }
     ]
   }
