@@ -110,6 +110,7 @@ export FZF_TMUX=1
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
+alias alacritty-ssh="alacritty --class ssh --config-file ~/.dotfiles/alacritty/alacritty-zsh.toml"
 
 source $ZSH/oh-my-zsh.sh
 source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
