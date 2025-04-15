@@ -2,3 +2,7 @@ lazygit/state.yml
 
 *.bak
 nvim/lazy-lock.json
+.tmux
+fzf-git.sh
+ohmyzsh
+passfzf
