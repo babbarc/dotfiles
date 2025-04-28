@@ -35,14 +35,25 @@ vim.keymap.set("n", "<leader>gd", function()
       actions = {
         -- default action: DiffviewOpen between two commits
         ["default"] = function(selected)
-          if #selected ~= 2 then
-            vim.notify("Please select exactly TWO commits", vim.log.levels.ERROR)
-            return
-          end
-          local sha1 = selected[1]:match("^([a-f0-9]+)")
-          local sha2 = selected[2]:match("^([a-f0-9]+)")
-          if sha1 and sha2 then
-            vim.cmd("DiffviewOpen " .. sha2 .. ".." .. sha1)
+          if #selected == 1 then
+            local sha = selected[1]:match("^([a-f0-9]+)")
+            if sha then
+              -- Try diff against parent (special handling for root commit later)
+              local has_parent = vim.fn.systemlist("git rev-list --parents -n 1 " .. sha)[1]
+              if has_parent and has_parent:find(" ") then
+                vim.cmd("DiffviewOpen " .. sha .. "^.." .. sha)
+              else
+                vim.cmd("DiffviewOpen " .. sha)
+              end
+            end
+          elseif #selected == 2 then
+            local sha1 = selected[1]:match("^([a-f0-9]+)")
+            local sha2 = selected[2]:match("^([a-f0-9]+)")
+            if sha1 and sha2 then
+              vim.cmd("DiffviewOpen " .. sha2 .. ".." .. sha1)
+            end
+          else
+            vim.notify("Select one or two commits maximum", vim.log.levels.ERROR)
           end
         end,
       },
