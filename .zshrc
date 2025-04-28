@@ -110,7 +110,9 @@ export FZF_TMUX=1
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
-alias alacritty-ssh="alacritty --class ssh --config-file ~/.dotfiles/alacritty/alacritty-zsh.toml"
+alias mvn-17="docker compose run --rm java-17 mvn"
+alias mvn-8="docker compose run --rm java-8 mvn"
+alias alacritty-zsh="alacritty --class zsh --config-file ~/.dotfiles/alacritty/alacritty-zsh.toml"
 
 source $ZSH/oh-my-zsh.sh
 source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
