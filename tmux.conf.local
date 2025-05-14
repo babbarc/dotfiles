@@ -447,6 +447,8 @@ set -ogq @catppuccin_window_current_text " #W"
 set -g status-left ""
 set -g status-right "#{E:@catppuccin_status_session}"
 
+set -g allow-passthrough on
+
 set -as terminal-features ",*:Tc"
 set -as terminal-features ",*:RGB"
 
