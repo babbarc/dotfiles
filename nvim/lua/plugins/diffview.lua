@@ -144,7 +144,7 @@ return {
               elseif #sel == 2 then
                 vim.cmd("DiffviewOpen " .. sel[2].commit .. ".." .. sel[1].commit)
               else
-                vim.notify("Select one or two commits maximum", vim.log.levels.ERROR)
+                vim.notify("Select maximum two commits", vim.log.levels.ERROR)
               end
             end,
           },
