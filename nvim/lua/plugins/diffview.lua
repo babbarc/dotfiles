@@ -18,7 +18,7 @@ return {
                 "--oneline",
                 "--decorate=short",
                 "--color=never",
-                "--pretty=format:%h%x1f%d%x1f%s%x1f%ch",
+                "--pretty=format:%h%x1f%D%x1f%s%x1f%ch",
               }
               local raw = vim.fn.systemlist(cmd)
               if vim.v.shell_error ~= 0 then
