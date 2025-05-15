@@ -188,6 +188,7 @@ return {
       {
         "<leader>gD",
         function()
+          ---@diagnostic disable-next-line: undefined-field
           Snacks.picker.git_diff_any()
         end,
         desc = "Snacks: Git Diff",
@@ -195,6 +196,7 @@ return {
       {
         "<leader>gE",
         function()
+          ---@diagnostic disable-next-line: undefined-field
           Snacks.picker.git_diff_branches()
         end,
         desc = "Snacks: Git Branch Diff",
