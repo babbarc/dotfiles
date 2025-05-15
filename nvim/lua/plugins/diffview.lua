@@ -53,7 +53,72 @@ return {
               return items
             end,
 
-            format = "git_log",
+            format = function(item, picker)
+              local util = Snacks.picker.util
+              local hl = Snacks.picker.highlight
+              local a = util.align
+              local ret = {}
+
+              -- 1) Commit icon + SHA
+              ret[#ret + 1] = { picker.opts.icons.git.commit, "SnacksPickerGitCommit" }
+              ret[#ret + 1] = { a(item.commit, 8, { truncate = true }), "SnacksPickerGitCommit" }
+              ret[#ret + 1] = { " " }
+
+              -- 2) Relative date
+              ret[#ret + 1] = { a(item.date, 16), "SnacksPickerGitDate" }
+              ret[#ret + 1] = { " " }
+
+              -- 3) Branch/Tag decorate info (if any)
+              if item.branch and item.branch ~= "" then
+                -- local truncated = a(item.branch, 20, { truncate = true })
+                local truncated = item.branch
+                ret[#ret + 1] = { "[" .. truncated .. "]", "SnacksPickerGitBranch" }
+                ret[#ret + 1] = { " " }
+              end
+
+              -- 4) Conventional-commit parsing: type, scope, breaking, and body
+              local msg = item.msg
+              local typ, scope, breaking, body = msg:match("^(%S+)%s*(%b())(!?):%s*(.*)$")
+              if not typ then
+                typ, breaking, body = msg:match("^(%S+)(!?):%s*(.*)$")
+              end
+
+              local msg_hl = "SnacksPickerGitMsg"
+              if typ and body then
+                local dimmed = vim.tbl_contains({ "chore", "bot", "build", "ci", "style", "test" }, typ)
+                msg_hl = dimmed and "SnacksPickerDimmed" or "SnacksPickerGitMsg"
+
+                -- type
+                local type_hl = breaking ~= "" and "SnacksPickerGitBreaking"
+                  or dimmed and "SnacksPickerBold"
+                  or "SnacksPickerGitType"
+                ret[#ret + 1] = { typ, type_hl }
+
+                -- scope
+                if scope and scope ~= "" then
+                  ret[#ret + 1] = { scope, "SnacksPickerGitScope" }
+                end
+
+                -- breaking "!"
+                if breaking ~= "" then
+                  ret[#ret + 1] = { "!", "SnacksPickerGitBreaking" }
+                end
+
+                -- delimiter
+                ret[#ret + 1] = { ": ", "SnacksPickerDelim" }
+                msg = body
+              end
+
+              -- 5) The rest of the message
+              ret[#ret + 1] = { msg, msg_hl }
+
+              -- 6) Markdown-style inline formatting & issue hyperlinked
+              hl.markdown(ret)
+              hl.highlight(ret, { ["#%d+"] = "SnacksPickerGitIssue" })
+
+              return ret
+            end,
+
             preview = "git_show",
 
             -- 4) reuse our globals (fuzzy, sort by idx)
