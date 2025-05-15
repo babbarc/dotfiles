@@ -148,6 +148,38 @@ return {
               end
             end,
           },
+          git_diff_branches = {
+            finder = "git_branches",
+            format = "git_branch",
+            preview = "git_log",
+
+            matcher = { fuzzy = true },
+            sort = { fields = { "idx" } },
+
+            title = "Select branches to diff",
+
+            confirm = function(picker)
+              local sel = picker:selected()
+              picker:close()
+
+              local function open_single(s)
+                local parents = vim.fn.systemlist("git rev-list --parents -n 1 " .. s)[1] or ""
+                if parents:find(" ") then
+                  vim.cmd("DiffviewOpen " .. s .. "^.." .. s)
+                else
+                  vim.cmd("DiffviewOpen " .. s)
+                end
+              end
+
+              if #sel == 1 then
+                open_single(sel[1].branch)
+              elseif #sel == 2 then
+                vim.cmd("DiffviewOpen " .. sel[2].branch .. ".." .. sel[1].branch)
+              else
+                vim.notify("Select maximum two commits", vim.log.levels.ERROR)
+              end
+            end,
+          },
         },
       },
     },
@@ -159,6 +191,13 @@ return {
           Snacks.picker.git_diff_any()
         end,
         desc = "Snacks: Git Diff",
+      },
+      {
+        "<leader>gE",
+        function()
+          Snacks.picker.git_diff_branches()
+        end,
+        desc = "Snacks: Git Branch Diff",
       },
     },
   },
