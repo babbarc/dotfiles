@@ -156,7 +156,7 @@ return {
       {
         "<leader>gD",
         function()
-          require("snacks").picker.git_diff_any()
+          Snacks.picker.git_diff_any()
         end,
         desc = "Snacks: Git Diff",
       },
