@@ -121,14 +121,11 @@ return {
 
             preview = "git_show",
 
-            -- 4) reuse our globals (fuzzy, sort by idx)
             matcher = { fuzzy = true },
             sort = { fields = { "idx" } },
 
-            -- 5) title & allow two picks
             title = "Select commits to diff",
 
-            -- 6) on <CR>, open Diffview
             confirm = function(picker)
               local sel = picker:selected()
               picker:close()
@@ -155,7 +152,6 @@ return {
       },
     },
 
-    -- map <leader>gs → open our git_commits picker
     keys = {
       {
         "<leader>gD",
@@ -166,8 +162,6 @@ return {
       },
     },
   },
-
-  -- ensure Diffview is available
   {
     "sindrets/diffview.nvim",
     opts = {},
