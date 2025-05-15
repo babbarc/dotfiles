@@ -6,3 +6,4 @@ vim.filetype.add({
     [".*/waybar/config"] = "jsonc",
   },
 })
+vim.opt.clipboard = "unnamedplus"
