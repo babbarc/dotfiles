@@ -61,7 +61,7 @@
     },
     "cpu": {
       "interval": 5,
-      "format": " {usage:1}%  󰖡 {load:2}"
+      "format": "  {usage:1}%  󰖡  {load:2}"
     },
     "temperature": {
       "thermal-zone": 30,
