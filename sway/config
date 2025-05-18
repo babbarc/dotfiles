@@ -14,13 +14,13 @@ set $down j
 set $up k
 set $right l
 # Your preferred terminal emulator
-set $term alacritty
+set $term kitty
 # Your preferred application launcher
 # Note: it's recommended that you pass the final command to sway
 # set $menu dmenu_path | bemenu | xargs swaymsg exec
 # set $menu bemenu-run
 # mocha
-set $menu bemenu-run --fb "#1e1e2e" --ff "#cdd6f4" --nb "#1e1e2e" --nf "#cdd6f4" --tb "#1e1e2e" --hb "#1e1e2e" --tf "#f38ba8" --hf "#f9e2af" --nf "#cdd6f4" --af "#cdd6f4" --ab "#1e1e2e" --fn "SauceCodePro Nerd Font Mono 12" --hp 15 -M 20 -H 30 --ch 20 --cw 5 -n -i --prompt ">"
+set $menu bemenu-run --fb "#1e1e2e" --ff "#cdd6f4" --nb "#1e1e2e" --nf "#cdd6f4" --tb "#1e1e2e" --hb "#1e1e2e" --tf "#f38ba8" --hf "#f9e2af" --nf "#cdd6f4" --af "#cdd6f4" --ab "#1e1e2e" --fn "JetBrainsMono Nerd Font" --hp 15 -M 20 -H 30 --ch 20 --cw 5 -n -i --prompt ">"
 
 # You preferred file manager
 set $filem thunar
@@ -88,7 +88,7 @@ bindswitch lid:on exec systemctl suspend
 default_border pixel
 
 client.focused #7f849c #45475a #ffffff #585b70 #45475a
-font pango:SauceCodePro Nerd Font Mono 11
+font pango:JetBrainsMono Nerd Font 11
 
 # Gestures
 bindgesture swipe:left workspace next_on_output
@@ -275,5 +275,7 @@ bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
 bindsym XF86MonBrightnessUp exec brightnessctl set 5%+
 
 # exec dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK
+
+exec_always dunst
 
 include /etc/sway/config.d/*
