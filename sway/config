@@ -100,7 +100,8 @@ bindgesture swipe:right workspace prev_on_output
 #
 # screen grab
   # bindsym --release Print exec grim -g \"$(slurp)" ~/screenshots/$(date +%Y-%m-%d_%H-%m-%s).png
-  bindsym --release Print exec grim -g \"$(slurp)" - | swappy -f -
+  # bindsym --release Print exec grim -g \"$(slurp)" - | swappy -f -
+  bindsym --release Print exec flameshot gui
   # bindsym --release Print exec grim -g \"$(slurp)" - | wl-copy
 
   # start a terminal
