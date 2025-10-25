@@ -2,11 +2,11 @@
 import = ["~/.config/alacritty/catppuccin/catppuccin-mocha.toml"]
 
 [font]
-size = 11.0
-normal = { family = "DejaVuSansM Nerd Font", style = "Regular" }
-bold = { family = "DejaVuSansM Nerd Font", style = "Bold" }
-bold_italic = { family = "DejaVuSansM Nerd Font", style = "Bold Oblique" }
-italic = { family = "DejaVuSansM Nerd Font", style = "Oblique" }
+size = 12.0
+normal = { family = "JetBrainsMono Nerd Font", style = "Regular" }
+bold = { family = "JetBrainsMono Nerd Font", style = "Bold" }
+bold_italic = { family = "JetBrainsMono Nerd Font", style = "Bold Oblique" }
+italic = { family = "JetBrainsMono Nerd Font", style = "Oblique" }
 
 [scrolling]
 history = 10000
