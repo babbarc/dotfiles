@@ -19,7 +19,8 @@
       "max-length": 50,
       "rewrite": {
         "(.*) — Mozilla Firefox": "🌎 $1",
-        "(.*) — zsh": "> [$1]"
+        "(.*) - zsh": "$1 $",
+        "(.*) - fish": "❯ $1"
       }
     },
     "spacing": 4,
