@@ -17,5 +17,6 @@
     ./modules/fish.nix
     ./modules/wezterm.nix
     ./modules/nvim.nix
+    ./modules/lazygit.nix
   ];
 }
