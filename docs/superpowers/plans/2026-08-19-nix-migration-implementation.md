@@ -942,10 +942,40 @@ luarocks, aws-cli, influx-cli, neovim
 - `jdk-openjdk` — was required by `maven`; **now unblocked** since `maven`
   itself was removed in this same pass (not re-attempted — left as a
   follow-up for whenever it's convenient, `sudo pacman -R jdk-openjdk`)
-- `fish` — required by `fisher` (which stays pacman-managed permanently,
-  per Task 5 — this block is expected to be permanent, not a follow-up)
+- `fish` — required by `fisher`
 
 Verified afterward: a fresh fish shell resolves all 30 checkable
 Nix-provided replacements for the removed packages correctly (no more
 pacman fallback to silently mask a problem), confirming the Nix versions
 are genuinely standing on their own now, not just coexisting.
+
+### Follow-up: fisher brought under Nix, `fish`/`fisher` fully off pacman
+
+The `fish`/`fisher` block above turned out not to be permanent. `fisher`'s
+pacman `depends=fish` was a packaging artifact, not a real technical
+requirement — fisher is just two plain fish files (`functions/fisher.fish`,
+`completions/fisher.fish`), no binary, no build, nothing fish-version-specific.
+Its actual upstream install method is exactly that: place those two files.
+
+`nix/flake.nix` gained a non-flake input (`fisher.url =
+"github:jorgebucaran/fisher"; flake = false;`, same wiring pattern already
+proven for the since-removed herdr input) and `nix/modules/fish.nix` now
+fetches those two files directly and places them where pacman's package used
+to. Fisher's own plugin-management (`fisher install`/`update` writing into
+`conf.d`/`functions`/`completions` at runtime) is completely unchanged — only
+fisher's own bootstrap moved to Nix.
+
+With that in place, `fisher` then `fish` were removed from pacman (in that
+order — `fisher`'s dependency had to go first). Verified afterward: `fish
+--version`, `fisher list` (all 4 plugins), and the 3 custom functions all
+still resolve correctly, and `which fish` now resolves to
+`/nix/store/.../fish-4.8.1/bin/fish` — fish is genuinely 100% Nix-managed now.
+
+**One real breakage found and fixed as a result:** `~/.config/herdr/config.toml`
+had `default_shell = "/usr/bin/fish"` hardcoded — a path that no longer exists
+once fish left pacman. Since herdr is deliberately outside this whole Nix
+migration (descoped in Task 9), this isn't a `home-manager switch`-managed
+file; it was fixed with a direct one-line edit to
+`default_shell = "/home/USERNAME/.nix-profile/bin/fish"` (the stable
+per-generation symlink, not a raw `/nix/store/...` hash path that would break
+on the next fish update).
