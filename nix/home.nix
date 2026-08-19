@@ -19,6 +19,7 @@
     ./modules/wezterm.nix
     ./modules/nvim.nix
     ./modules/lazygit.nix
+    ./modules/firstmate.nix
     ./modules/pi.nix
     ./modules/fonts.nix
   ];
