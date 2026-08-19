@@ -15,6 +15,8 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs {
         inherit system;
+        # unrar is nixpkgs' unfreeRedistributable; keep this exception list to
+        # explicitly-audited packages only, don't widen it casually.
         config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [ "unrar" ];
       };
     in
