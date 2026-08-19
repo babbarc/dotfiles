@@ -13,5 +13,6 @@
 
   imports = [
     ./modules/cli-tools.nix
+    ./modules/dev-toolchains.nix
   ];
 }
