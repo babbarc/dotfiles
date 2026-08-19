@@ -1,0 +1,17 @@
+{ config, pkgs, ... }:
+{
+  home.username = "USERNAME";
+  home.homeDirectory = "/home/USERNAME";
+
+  # Pin to the home-manager release this config was first created against.
+  # Do not bump this when nixpkgs/home-manager update later — see home-manager's
+  # documentation on stateVersion for why.
+  home.stateVersion = "24.11";
+
+  programs.home-manager.enable = true;
+  programs.fish.enable = true;
+
+  imports = [
+    ./modules/cli-tools.nix
+  ];
+}
