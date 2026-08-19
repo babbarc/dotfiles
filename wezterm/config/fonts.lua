@@ -5,7 +5,7 @@ local platform = require('utils.platform')
 local font_family = 'JetBrainsMono Nerd Font'
 -- local font_family = 'CartographCF Nerd Font'
 
-local font_size = 11
+local font_size = 15.0
 
 ---@type Config
 return {
