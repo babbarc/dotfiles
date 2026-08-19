@@ -20,6 +20,7 @@
     ./modules/nvim.nix
     ./modules/lazygit.nix
     ./modules/firstmate.nix
+    ./modules/herdr.nix
     ./modules/pi.nix
     ./modules/fonts.nix
   ];
