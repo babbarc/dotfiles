@@ -15,5 +15,6 @@
     ./modules/cli-tools.nix
     ./modules/dev-toolchains.nix
     ./modules/fish.nix
+    ./modules/wezterm.nix
   ];
 }
