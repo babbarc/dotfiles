@@ -50,10 +50,17 @@ in
   # path that doesn't exist on this home-manager-only (non-NixOS) host.
   # Define the unit ourselves against the GI_TYPELIB_PATH-fixed wrapper above
   # instead of linking theirs.
+  # WantedBy=graphical-session.target, tried first, silently never fired:
+  # that target is never activated on this host at all (verified `systemctl
+  # --user is-active graphical-session.target` -> inactive, and confirmed
+  # `~/.dotfiles/sway/config` has no `systemctl --user import-environment` /
+  # session-target integration — sway is launched without binding it). The
+  # only unit actually active in this systemd --user session is
+  # default.target, so both services below bind to that instead.
   systemd.user.services.whisper-dictation = {
     Unit = {
       Description = "Whisper Dictation - local push-to-talk speech-to-text";
-      After = [ "graphical-session.target" ];
+      After = [ "default.target" ];
     };
     Service = {
       ExecStart = "${wrappedBin}";
@@ -61,13 +68,9 @@ in
       RestartSec = 5;
       Environment = [ "PYTHONUNBUFFERED=1" ];
     };
-    Install.WantedBy = [ "graphical-session.target" ];
+    Install.WantedBy = [ "default.target" ];
   };
 
-  # ydotoold needs /dev/uinput, currently root-only — deliberately not
-  # auto-started (WantedBy omitted): it would just crash-loop until the
-  # manual permission steps below are done. Start it by hand afterwards with
-  # `systemctl --user start ydotoold`.
   systemd.user.services.ydotoold = {
     Unit.Description = "ydotool daemon (uinput-based input injection)";
     Service = {
@@ -75,19 +78,15 @@ in
       Restart = "on-failure";
       RestartSec = 5;
     };
+    Install.WantedBy = [ "default.target" ];
   };
 
-  # NOT handled here, and cannot be from home-manager on a non-NixOS host —
-  # both are one-time manual steps with sudo:
-  #
-  #   1. sudo usermod -aG input USERNAME
-  #      then start a fresh login session (group membership doesn't apply to
-  #      an already-open one).
-  #   2. A udev rule granting the input group access to /dev/uinput, which is
-  #      currently root-only (crw------- root root):
-  #        echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | \
-  #          sudo tee /etc/udev/rules.d/70-uinput.rules
-  #        sudo udevadm control --reload-rules && sudo udevadm trigger
+  # Both one-time manual sudo steps are done (usermod -aG input, the
+  # /dev/uinput udev rule, and /etc/modules-load.d/uinput.conf so the uinput
+  # kernel module — not loaded by default on this host — comes up at boot
+  # before anything tries to open the device). Verified across a real
+  # reboot: module loaded with no manual modprobe, /dev/uinput came up
+  # crw-rw---- root:input, both services now start unprompted.
   #
   # Default config lands at ~/.config/whisper-dictation/config.yaml on first
   # run (super+period push-to-talk, medium whisper model — ~1.5GB, downloaded
