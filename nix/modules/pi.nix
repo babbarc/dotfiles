@@ -8,6 +8,7 @@ let
   };
   settingsDefaultsFile = pkgs.writeText "pi-settings-defaults.json" (builtins.toJSON managedDefaults);
   settingsPath = "${config.home.homeDirectory}/.pi/agent/settings.json";
+  dotfiles = "${config.home.homeDirectory}/.dotfiles";
 in
 {
   home.packages = with pkgs; [
@@ -49,4 +50,20 @@ in
       $DRY_RUN_CMD install -m 644 ${settingsDefaultsFile} "$settings_file"
     fi
   '';
+
+  # Self-authored extensions/themes only - never third-party package code.
+  # Out-of-store symlinks (not xdg.configFile) so editing a file here and
+  # running Pi's `/reload` picks it up immediately, no `home-manager switch`
+  # needed, while still keeping the source git-tracked and reproducible.
+  #
+  # Third-party Pi packages are deliberately NOT vendored through Nix: pin them
+  # by exact npm version / git commit in a `packages` array added to
+  # managedDefaults above (merged in the same way as the other fields), and
+  # let Pi's own installer manage the downloaded trees in its unmanaged
+  # ~/.pi/agent/npm and ~/.pi/agent/git - don't try to wrap that in a
+  # derivation.
+  home.file.".pi/agent/extensions".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/pi/extensions";
+  home.file.".pi/agent/themes".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/pi/themes";
 }
