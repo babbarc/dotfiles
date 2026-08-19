@@ -362,30 +362,46 @@ cp -r ~/.config/fish/themes ~/.dotfiles/fish/themes
 
 - [ ] **Step 2: Write the module**
 
+**CORRECTED (post-implementation) — differs from the original draft below in three
+load-bearing ways, discovered while implementing this task:**
+1. `pkgs.fisher` does not exist in nixpkgs — there is no `home.packages`/`fisher`
+   entry. Fisher stays exactly as pacman-installed today (`fisher 4.4.8-1`); only
+   fish's config *content* moves to Nix.
+2. Paths are `../../fish/...`, not `../fish/...` — `nix/modules/fish.nix` is two
+   directories below the repo root (`nix/modules/`), so reaching `~/.dotfiles/fish/`
+   needs two `../`, not one. (This same off-by-one existed in the original drafts of
+   Tasks 6-9 below and has been corrected there too.)
+3. `"fish/config.fish"` needs `lib.mkForce`, because home-manager's own
+   `programs.fish` module (enabled since Task 1) already defines that same
+   `xdg.configFile` key internally — without `mkForce` this is a "conflicting
+   definition values" eval error, not a real ambiguity to resolve any other way.
+
 ```nix
-{ pkgs, ... }:
+{ lib, ... }:
 {
   # programs.fish.enable is already set in home.nix (Task 1).
-
-  home.packages = with pkgs; [
-    fisher
-  ];
+  # fisher itself stays pacman-managed (fisher 4.4.8-1) — it isn't packaged in
+  # nixpkgs; only fish's config content is migrated here.
 
   xdg.configFile = {
-    "fish/config.fish".source = ../fish/config.fish;
-    "fish/conf.d/fish_frozen_theme.fish".source = ../fish/conf.d/fish_frozen_theme.fish;
-    "fish/conf.d/fish_frozen_key_bindings.fish".source = ../fish/conf.d/fish_frozen_key_bindings.fish;
-    "fish/functions/fish_greeting.fish".source = ../fish/functions/fish_greeting.fish;
-    "fish/functions/joy-console.fish".source = ../fish/functions/joy-console.fish;
-    "fish/functions/rgf.fish".source = ../fish/functions/rgf.fish;
-    "fish/functions/s.fish".source = ../fish/functions/s.fish;
+    "fish/config.fish".source = lib.mkForce ../../fish/config.fish;
+    "fish/conf.d/fish_frozen_theme.fish".source = ../../fish/conf.d/fish_frozen_theme.fish;
+    "fish/conf.d/fish_frozen_key_bindings.fish".source = ../../fish/conf.d/fish_frozen_key_bindings.fish;
+    "fish/functions/fish_greeting.fish".source = ../../fish/functions/fish_greeting.fish;
+    "fish/functions/joy-console.fish".source = ../../fish/functions/joy-console.fish;
+    "fish/functions/rgf.fish".source = ../../fish/functions/rgf.fish;
+    "fish/functions/s.fish".source = ../../fish/functions/s.fish;
     "fish/themes" = {
-      source = ../fish/themes;
+      source = ../../fish/themes;
       recursive = true;
     };
   };
 }
 ```
+
+Note: the live `~/.config/fish/themes/` directory was empty, and git cannot track
+empty directories, so a placeholder `~/.dotfiles/fish/themes/.gitkeep` was added so
+the flake's git-tracked source can see the directory at all.
 
 - [ ] **Step 3: Add the import**
 
@@ -477,15 +493,20 @@ overwritten by an upstream pull).
 
 - [ ] **Step 3: Write the module**
 
+Paths are `../../wezterm/...`, not `../wezterm/...` — `nix/modules/wezterm.nix` is
+two directories below the repo root, so reaching `~/.dotfiles/wezterm/` needs two
+`../`. (This off-by-one was discovered and corrected during Task 5's implementation;
+applying the fix here up front.)
+
 ```nix
 { ... }:
 {
   xdg.configFile = {
-    "wezterm/config/appearance.lua".source = ../wezterm/config/appearance.lua;
-    "wezterm/config/bindings.lua".source = ../wezterm/config/bindings.lua;
-    "wezterm/config/domains.lua".source = ../wezterm/config/domains.lua;
-    "wezterm/config/fonts.lua".source = ../wezterm/config/fonts.lua;
-    "wezterm/config/launch.lua".source = ../wezterm/config/launch.lua;
+    "wezterm/config/appearance.lua".source = ../../wezterm/config/appearance.lua;
+    "wezterm/config/bindings.lua".source = ../../wezterm/config/bindings.lua;
+    "wezterm/config/domains.lua".source = ../../wezterm/config/domains.lua;
+    "wezterm/config/fonts.lua".source = ../../wezterm/config/fonts.lua;
+    "wezterm/config/launch.lua".source = ../../wezterm/config/launch.lua;
   };
 }
 ```
@@ -554,19 +575,22 @@ symlink that points to it.)
 
 - [ ] **Step 2: Write the module**
 
+Paths are `../../nvim/...`, not `../nvim/...` — `nix/modules/nvim.nix` is two
+directories below the repo root, so reaching `~/.dotfiles/nvim/` needs two `../`.
+
 ```nix
 { ... }:
 {
   xdg.configFile = {
-    "nvim/init.lua".source = ../nvim/init.lua;
-    "nvim/lazyvim.json".source = ../nvim/lazyvim.json;
-    "nvim/stylua.toml".source = ../nvim/stylua.toml;
+    "nvim/init.lua".source = ../../nvim/init.lua;
+    "nvim/lazyvim.json".source = ../../nvim/lazyvim.json;
+    "nvim/stylua.toml".source = ../../nvim/stylua.toml;
     "nvim/lua" = {
-      source = ../nvim/lua;
+      source = ../../nvim/lua;
       recursive = true;
     };
     "nvim/snippets" = {
-      source = ../nvim/snippets;
+      source = ../../nvim/snippets;
       recursive = true;
     };
   };
@@ -626,10 +650,13 @@ cp /tmp/lazygit-state.yml.bak ~/.config/lazygit/state.yml
 
 - [ ] **Step 2: Write the module**
 
+Path is `../../lazygit/config.yml`, not `../lazygit/config.yml` — `nix/modules/lazygit.nix`
+is two directories below the repo root.
+
 ```nix
 { ... }:
 {
-  xdg.configFile."lazygit/config.yml".source = ../lazygit/config.yml;
+  xdg.configFile."lazygit/config.yml".source = ../../lazygit/config.yml;
 }
 ```
 
@@ -702,6 +729,9 @@ once it's on `PATH` — no change needed there.)
 
 - [ ] **Step 4: Write the module**
 
+Path is `../../herdr/config.toml`, not `../herdr/config.toml` — `nix/modules/herdr.nix`
+is two directories below the repo root.
+
 ```nix
 { pkgs, herdr, system, ... }:
 {
@@ -709,7 +739,7 @@ once it's on `PATH` — no change needed there.)
     herdr.packages.${system}.default
   ];
 
-  xdg.configFile."herdr/config.toml".source = ../herdr/config.toml;
+  xdg.configFile."herdr/config.toml".source = ../../herdr/config.toml;
 }
 ```
 
