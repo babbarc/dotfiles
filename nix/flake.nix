@@ -14,9 +14,15 @@
       url = "github:jorgebucaran/fisher";
       flake = false;
     };
+    # No nixosModules/homeManagerModules — a plain package (packages.<system>.default)
+    # plus a systemd user unit copied into $out/lib/systemd/user. Its own unit's
+    # ExecStart is a NixOS system-profile path, so voice-dictation.nix defines its
+    # own systemd.user.services entry against this package's real store path
+    # instead of linking theirs.
+    whisper-dictation.url = "github:jacopone/whisper-dictation";
   };
 
-  outputs = { self, nixpkgs, home-manager, fisher, ... }:
+  outputs = { self, nixpkgs, home-manager, fisher, whisper-dictation, ... }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -29,7 +35,7 @@
     {
       homeConfigurations."USERNAME" = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        extraSpecialArgs = { inherit system fisher; };
+        extraSpecialArgs = { inherit system fisher whisper-dictation; };
         modules = [ ./home.nix ];
       };
     };

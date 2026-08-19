@@ -24,6 +24,7 @@
     ./modules/agent-cli-tools.nix
     ./modules/herdr.nix
     ./modules/pi.nix
+    ./modules/voice-dictation.nix
     ./modules/fonts.nix
   ];
 }
