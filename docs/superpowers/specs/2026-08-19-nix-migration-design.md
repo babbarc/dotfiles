@@ -2,6 +2,27 @@
 
 Date: 2026-08-19
 
+> **Post-implementation update:** two things below turned out differently once
+> implemented — noted here rather than silently rewritten, since the rest of this
+> doc reflects the plan as originally approved.
+> 1. **herdr was fully descoped**, not migrated. It's not in nixpkgs and has no
+>    binary cache, so getting it via Nix means compiling it from source on every
+>    machine — which conflicts with a "cache-fetched packages only" rule adopted
+>    partway through implementation. herdr stays exactly as it was before this
+>    migration: manually installed via its own curl installer, entirely outside
+>    Nix. Every mention of `herdr`/`herdr.nix` below (repo layout, Phase 3, the
+>    flake input) did not happen.
+> 2. **fisher's plugins were not migrated to `programs.fish.plugins`.** The
+>    "fisher-equivalent plugins" line under Phase 3 below described re-implementing
+>    fzf.fish/autopair.fish/fish-abbreviation-tips/z as Nix-fetched plugins. In
+>    practice they were left exactly as fisher (which itself isn't in nixpkgs
+>    either, so it also stays pacman-managed) already manages them — only `fish`'s
+>    package and the user's own config content moved to Nix.
+>
+> See `docs/superpowers/plans/2026-08-19-nix-migration-implementation.md` for the
+> full as-implemented account, including a fish PATH regression found and fixed
+> along the way.
+
 ## Goal
 
 Move user-space CLI/dev tooling and select dotfiles from pacman/yay to Nix,

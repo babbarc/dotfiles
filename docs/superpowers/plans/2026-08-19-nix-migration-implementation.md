@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Move user-space CLI/dev tooling and select dotfiles (fish, wezterm overrides, nvim, lazygit, herdr, pi) from pacman/yay to Nix, managed by standalone `home-manager` on top of the existing Arch install, in four phases with verified rollback at each step.
+**Goal:** Move user-space CLI/dev tooling and select dotfiles (fish, wezterm overrides, nvim, lazygit, pi) from pacman/yay to Nix, managed by standalone `home-manager` on top of the existing Arch install, in four phases with verified rollback at each step. herdr was descoped mid-execution (see Task 9) — it requires a from-source build with no binary cache, which conflicts with a "cache-fetched packages only" constraint set for this phase; it stays outside Nix entirely.
 
 **Architecture:** A new flake at `~/.dotfiles/nix/` (versioned in the existing `~/.dotfiles` git repo) defines one `homeConfigurations."USERNAME"` built from `home.nix`, which imports one module per concern under `nix/modules/`. Dotfile content is fully owned by home-manager (copied into the Nix store, not out-of-store symlinks) except for files a program writes back to at runtime (`fish_variables`, lazygit's `state.yml`, nvim's `lazy-lock.json`), which are deliberately left unmanaged so they stay writable.
 
-**Tech Stack:** Nix flakes, standalone home-manager (`nix-community/home-manager`), nixpkgs unstable, one custom flake input (`github:herdrdev/herdr`).
+**Tech Stack:** Nix flakes, standalone home-manager (`nix-community/home-manager`), nixpkgs unstable. No custom flake inputs — the originally-planned `github:herdrdev/herdr` input was added in Task 1 and removed in Task 9 once herdr was descoped (it can't be cache-fetched).
 
 ---
 
@@ -31,8 +31,8 @@ These were confirmed against nixpkgs unstable via `nix search`/`nix eval` before
 | nodejs (matches pacman's `nodejs 26.x`) | `nodejs_26` | plain `nodejs`/`nodejs_latest` currently resolves to 24.19.0, not 26 |
 | python interpreter | `python3` | |
 | jdk | `jdk` | resolves to OpenJDK 21 in nixpkgs unstable at time of writing — older than pacman's `jdk-openjdk 26`; acceptable per spec (no nixpkgs 26 available) |
-| pi coding agent | `pi-coding-agent` | binary name is `pi` |
-| herdr | not in nixpkgs — flake input `github:herdrdev/herdr`, output `packages.x86_64-linux.default` (currently `herdr-0.8.1`) | |
+| pi coding agent | `pi-coding-agent` | binary name is `pi`; verified cache-fetched (`nix build --dry-run`), no source build |
+| herdr | not in nixpkgs, no binary cache — would require a from-source build via its own flake (`github:herdrdev/herdr`). **Descoped in Task 9**; stays outside Nix entirely, not installed by this plan. |
 
 All `nix search`/`nix eval` commands below assume flakes + `nix-command` are enabled, which they already are (`experimental-features = fetch-tree flakes nix-command` confirmed in this session).
 
@@ -44,11 +44,11 @@ All `nix search`/`nix eval` commands below assume flakes + `nix-command` are ena
 - Create: `~/.dotfiles/nix/flake.nix`
 - Create: `~/.dotfiles/nix/home.nix`
 
-- [ ] **Step 1: Create the directory**
+- [x] **Step 1: Create the directory**
 
 Run: `mkdir -p ~/.dotfiles/nix/modules`
 
-- [ ] **Step 2: Write flake.nix**
+- [x] **Step 2: Write flake.nix**
 
 ```nix
 {
@@ -78,7 +78,7 @@ Run: `mkdir -p ~/.dotfiles/nix/modules`
 }
 ```
 
-- [ ] **Step 3: Write home.nix**
+- [x] **Step 3: Write home.nix**
 
 `programs.fish.enable = true` is turned on here in bootstrap (not deferred to the fish
 dotfiles phase) because fish is the interactive shell on this machine and home-manager's
@@ -106,7 +106,7 @@ theme/keybindings, fisher plugins) is added in Task 6.
 }
 ```
 
-- [ ] **Step 4: Verify the flake evaluates**
+- [x] **Step 4: Verify the flake evaluates**
 
 Run: `nix flake show ~/.dotfiles/nix`
 Expected: lists `homeConfigurations.USERNAME` with no errors. (This will fail until
@@ -114,7 +114,7 @@ Expected: lists `homeConfigurations.USERNAME` with no errors. (This will fail un
 in isolation first, temporarily comment out the `imports` line, run the check, then
 restore it before Task 3.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd ~/.dotfiles && git add nix/flake.nix nix/home.nix && git commit -m "nix: scaffold flake and home-manager entrypoint"
@@ -127,7 +127,7 @@ cd ~/.dotfiles && git add nix/flake.nix nix/home.nix && git commit -m "nix: scaf
 **Files:**
 - Create: `~/.dotfiles/nix/modules/cli-tools.nix`
 
-- [ ] **Step 1: Write the module**
+- [x] **Step 1: Write the module**
 
 ```nix
 { pkgs, ... }:
@@ -169,7 +169,7 @@ cd ~/.dotfiles && git add nix/flake.nix nix/home.nix && git commit -m "nix: scaf
 }
 ```
 
-- [ ] **Step 2: First activation**
+- [x] **Step 2: First activation**
 
 home-manager isn't installed as a command yet, so the first switch is bootstrapped
 via `nix run` against the well-known `home-manager` flake registry entry. Every switch
@@ -181,12 +181,12 @@ already have plain, unmanaged content on disk.
 Run: `nix run home-manager -- switch --flake ~/.dotfiles/nix#USERNAME -b backup`
 Expected: build succeeds, ends with `Creating home-manager generation` and no errors.
 
-- [ ] **Step 3: Verify the generation was created**
+- [x] **Step 3: Verify the generation was created**
 
 Run: `home-manager generations`
 Expected: exactly one line, timestamped today.
 
-- [ ] **Step 4: Pick up the new PATH in an interactive shell**
+- [x] **Step 4: Pick up the new PATH in an interactive shell**
 
 The running shell (this one) won't see the new `~/.nix-profile/bin` entries or fish's
 new `conf.d/hm-session-vars.fish` until a new shell starts.
@@ -195,12 +195,12 @@ Run: `exec fish -c 'which rg; which fd; which bat; which fzf; which starship; wh
 Expected: every path printed contains `/nix/store/` or `/home/USERNAME/.nix-profile/`
 (not `/usr/bin/`).
 
-- [ ] **Step 5: Sanity-check a couple of tools actually run**
+- [x] **Step 5: Sanity-check a couple of tools actually run**
 
 Run: `exec fish -c 'rg --version; starship --version'`
 Expected: both print version output without error.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd ~/.dotfiles && git add nix/modules/cli-tools.nix && git commit -m "nix(cli-tools): migrate phase 1 CLI toolset to home-manager"
@@ -218,13 +218,13 @@ a hypothetical.
 
 **Files:** none (verification only)
 
-- [ ] **Step 1: Confirm both versions exist on disk**
+- [x] **Step 1: Confirm both versions exist on disk**
 
 Run: `pacman -Q ripgrep && ls -la /nix/var/nix/profiles/per-user/USERNAME/home-manager/home-path/bin/rg 2>/dev/null || readlink -f $(fish -c 'which rg')`
 Expected: pacman shows `ripgrep 15.2.0-1` installed; the Nix-provided `rg` resolves to
 a path under `/nix/store/`.
 
-- [ ] **Step 2: Roll back one generation and confirm PATH falls back to pacman**
+- [x] **Step 2: Roll back one generation and confirm PATH falls back to pacman**
 
 ```bash
 home-manager generations
@@ -236,7 +236,7 @@ Expected: after rollback, `which rg` in the new shell resolves to `/usr/bin/rg`
 doesn't break `rg` availability, it just falls through to pacman's copy still on
 `PATH`.
 
-- [ ] **Step 3: Switch forward again to restore the Nix-managed generation**
+- [x] **Step 3: Switch forward again to restore the Nix-managed generation**
 
 ```bash
 home-manager switch --flake ~/.dotfiles/nix#USERNAME -b backup
@@ -244,7 +244,7 @@ exec fish -c 'which rg'
 ```
 Expected: `which rg` now resolves to the `/nix/store/` path again.
 
-- [ ] **Step 4: No commit needed**
+- [x] **Step 4: No commit needed**
 
 This task only exercises existing generations; there's no file change to commit.
 
@@ -256,7 +256,7 @@ This task only exercises existing generations; there's no file change to commit.
 - Create: `~/.dotfiles/nix/modules/dev-toolchains.nix`
 - Modify: `~/.dotfiles/nix/home.nix:16-18` (imports list)
 
-- [ ] **Step 1: Write the module**
+- [x] **Step 1: Write the module**
 
 ```nix
 { pkgs, ... }:
@@ -276,7 +276,7 @@ This task only exercises existing generations; there's no file change to commit.
 }
 ```
 
-- [ ] **Step 2: Add the import**
+- [x] **Step 2: Add the import**
 
 In `~/.dotfiles/nix/home.nix`, change:
 ```nix
@@ -292,7 +292,7 @@ to:
   ];
 ```
 
-- [ ] **Step 3: Switch and verify**
+- [x] **Step 3: Switch and verify**
 
 ```bash
 home-manager switch --flake ~/.dotfiles/nix#USERNAME -b backup
@@ -301,12 +301,12 @@ exec fish -c 'which node; which npm; which python3; which mvn; which cmake; whic
 Expected: all resolve under `/nix/store/` or `/home/USERNAME/.nix-profile/`. `npm`
 comes bundled with the `nodejs_26` derivation — no separate package needed.
 
-- [ ] **Step 4: Confirm versions run**
+- [x] **Step 4: Confirm versions run**
 
 Run: `exec fish -c 'node --version; npm --version; python3 --version; nvim --version | head -1'`
 Expected: version strings print without error (Node should report a `v26.x` version).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd ~/.dotfiles && git add nix/home.nix nix/modules/dev-toolchains.nix && git commit -m "nix(dev-toolchains): migrate phase 2 dev toolchains to home-manager"
@@ -346,7 +346,7 @@ individually — deliberately *not* claiming the whole `~/.config/fish` or
 - Create: `~/.dotfiles/nix/modules/fish.nix`
 - Modify: `~/.dotfiles/nix/home.nix` (imports list)
 
-- [ ] **Step 1: Copy the user-authored files into the dotfiles repo**
+- [x] **Step 1: Copy the user-authored files into the dotfiles repo**
 
 ```bash
 mkdir -p ~/.dotfiles/fish/conf.d ~/.dotfiles/fish/functions
@@ -360,44 +360,78 @@ cp ~/.config/fish/functions/s.fish ~/.dotfiles/fish/functions/
 cp -r ~/.config/fish/themes ~/.dotfiles/fish/themes
 ```
 
-- [ ] **Step 2: Write the module**
+- [x] **Step 2: Write the module**
+
+**CORRECTED (post-implementation) — differs from the original draft below in
+several load-bearing ways, discovered while implementing this task and, in one
+case, while implementing Task 10:**
+1. `pkgs.fisher` does not exist in nixpkgs — there is no `home.packages`/`fisher`
+   entry. Fisher stays exactly as pacman-installed today (`fisher 4.4.8-1`); only
+   fish's config *content* moves to Nix.
+2. Paths are `../../fish/...`, not `../fish/...` — `nix/modules/fish.nix` is two
+   directories below the repo root (`nix/modules/`), so reaching `~/.dotfiles/fish/`
+   needs two `../`, not one. (This same off-by-one existed in the original drafts of
+   Tasks 6-9 below and has been corrected there too.)
+3. **`lib.mkForce` on `config.fish` was tried first, then reverted — it caused a
+   real regression.** `programs.fish` (enabled since Task 1) already defines
+   `xdg.configFile."fish/config.fish"` internally, so a plain second definition of
+   that key is a "conflicting definition values" eval error. `lib.mkForce` resolves
+   the eval error, but it does so by fully *replacing* home-manager's generated
+   config.fish — which silently dropped the `hm-session-vars.fish` sourcing that
+   adds `~/.nix-profile/bin` to PATH. The result: no Nix-installed package's binary
+   was reachable by bare name in any fish shell, for as long as this was in place.
+   This went undetected through Tasks 6-9 because their fish-based `which <tool>`
+   checks all happened to hit a pacman-installed fallback of the same tool; it
+   surfaced only in Task 10, on `pi` (the first Nix-only tool with no such
+   fallback). **Fixed** by using `programs.fish.interactiveShellInit` instead,
+   which lets home-manager keep generating config.fish (PATH setup included) while
+   still injecting the user's two lines (starship init, greeting suppression) into
+   it. `~/.dotfiles/fish/config.fish` was removed — its content now lives directly
+   in `interactiveShellInit` below, since a standalone file no longer being read by
+   anything would be a stale, misleading duplicate.
 
 ```nix
-{ pkgs, ... }:
+{ ... }:
 {
   # programs.fish.enable is already set in home.nix (Task 1).
+  # fisher itself stays pacman-managed (fisher 4.4.8-1) — it isn't packaged in
+  # nixpkgs; only fish's config content is migrated here.
 
-  home.packages = with pkgs; [
-    fisher
-  ];
+  programs.fish.interactiveShellInit = ''
+    starship init fish | source
+    set -g fish_greeting
+  '';
 
   xdg.configFile = {
-    "fish/config.fish".source = ../fish/config.fish;
-    "fish/conf.d/fish_frozen_theme.fish".source = ../fish/conf.d/fish_frozen_theme.fish;
-    "fish/conf.d/fish_frozen_key_bindings.fish".source = ../fish/conf.d/fish_frozen_key_bindings.fish;
-    "fish/functions/fish_greeting.fish".source = ../fish/functions/fish_greeting.fish;
-    "fish/functions/joy-console.fish".source = ../fish/functions/joy-console.fish;
-    "fish/functions/rgf.fish".source = ../fish/functions/rgf.fish;
-    "fish/functions/s.fish".source = ../fish/functions/s.fish;
+    "fish/conf.d/fish_frozen_theme.fish".source = ../../fish/conf.d/fish_frozen_theme.fish;
+    "fish/conf.d/fish_frozen_key_bindings.fish".source = ../../fish/conf.d/fish_frozen_key_bindings.fish;
+    "fish/functions/fish_greeting.fish".source = ../../fish/functions/fish_greeting.fish;
+    "fish/functions/joy-console.fish".source = ../../fish/functions/joy-console.fish;
+    "fish/functions/rgf.fish".source = ../../fish/functions/rgf.fish;
+    "fish/functions/s.fish".source = ../../fish/functions/s.fish;
     "fish/themes" = {
-      source = ../fish/themes;
+      source = ../../fish/themes;
       recursive = true;
     };
   };
 }
 ```
 
-- [ ] **Step 3: Add the import**
+Note: the live `~/.config/fish/themes/` directory was empty, and git cannot track
+empty directories, so a placeholder `~/.dotfiles/fish/themes/.gitkeep` was added so
+the flake's git-tracked source can see the directory at all.
+
+- [x] **Step 3: Add the import**
 
 In `~/.dotfiles/nix/home.nix`, add `./modules/fish.nix` to the `imports` list.
 
-- [ ] **Step 4: Switch**
+- [x] **Step 4: Switch**
 
 Run: `home-manager switch --flake ~/.dotfiles/nix#USERNAME -b backup`
 Expected: succeeds. Any of the 7 files that already existed as plain files get
 renamed to `<name>.backup` by the `-b backup` flag rather than causing an error.
 
-- [ ] **Step 5: Verify fish still starts correctly with fisher-managed plugins intact**
+- [x] **Step 5: Verify fish still starts correctly with fisher-managed plugins intact**
 
 ```bash
 exec fish -c 'which fisher; fisher list; type joy-console; type rgf; type s'
@@ -406,13 +440,13 @@ Expected: `fisher` resolves under `/nix/store/`; `fisher list` still shows
 `patrickf1/fzf.fish`, `jorgebucaran/autopair.fish`, `gazorby/fish-abbreviation-tips`,
 `jethrokuan/z`; the three custom functions are found (no "not a function" errors).
 
-- [ ] **Step 6: Verify universal variables still work**
+- [x] **Step 6: Verify universal variables still work**
 
 Run: `fish -c 'set -U __hm_migration_test 1; set -U -e __hm_migration_test'`
 Expected: no permission/read-only errors — confirms `fish_variables` was correctly
 left writable.
 
-- [ ] **Step 7: Diff the backups to confirm no content was lost, then remove them**
+- [x] **Step 7: Diff the backups to confirm no content was lost, then remove them**
 
 ```bash
 diff ~/.config/fish/config.fish.backup ~/.dotfiles/fish/config.fish
@@ -420,7 +454,7 @@ diff ~/.config/fish/config.fish.backup ~/.dotfiles/fish/config.fish
 Expected: no output (files identical). Repeat for the other `.backup` files created
 in Step 4, then `rm` each `.backup` file once confirmed.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 cd ~/.dotfiles && git add fish nix/home.nix nix/modules/fish.nix && git commit -m "nix(fish): migrate fish config content and fisher to home-manager"
@@ -452,7 +486,7 @@ git-tracked there) so its `git status`/`git pull` don't see them as conflicting.
 - Modify: `~/.config/wezterm/.git/info/exclude` (local-only untrack, via `git rm --cached`)
 - Modify: `~/.dotfiles/nix/home.nix` (imports list)
 
-- [ ] **Step 1: Copy the 5 override files into the dotfiles repo**
+- [x] **Step 1: Copy the 5 override files into the dotfiles repo**
 
 ```bash
 mkdir -p ~/.dotfiles/wezterm/config
@@ -463,7 +497,7 @@ cp ~/.config/wezterm/config/fonts.lua ~/.dotfiles/wezterm/config/
 cp ~/.config/wezterm/config/launch.lua ~/.dotfiles/wezterm/config/
 ```
 
-- [ ] **Step 2: Untrack the 5 files inside the wezterm-config clone**
+- [x] **Step 2: Untrack the 5 files inside the wezterm-config clone**
 
 ```bash
 cd ~/.config/wezterm
@@ -475,32 +509,37 @@ Expected: `git status` shows nothing for these 5 paths (they're now ignored via
 `.git/info/exclude`, which — unlike `.gitignore` — is local-only and never gets
 overwritten by an upstream pull).
 
-- [ ] **Step 3: Write the module**
+- [x] **Step 3: Write the module**
+
+Paths are `../../wezterm/...`, not `../wezterm/...` — `nix/modules/wezterm.nix` is
+two directories below the repo root, so reaching `~/.dotfiles/wezterm/` needs two
+`../`. (This off-by-one was discovered and corrected during Task 5's implementation;
+applying the fix here up front.)
 
 ```nix
 { ... }:
 {
   xdg.configFile = {
-    "wezterm/config/appearance.lua".source = ../wezterm/config/appearance.lua;
-    "wezterm/config/bindings.lua".source = ../wezterm/config/bindings.lua;
-    "wezterm/config/domains.lua".source = ../wezterm/config/domains.lua;
-    "wezterm/config/fonts.lua".source = ../wezterm/config/fonts.lua;
-    "wezterm/config/launch.lua".source = ../wezterm/config/launch.lua;
+    "wezterm/config/appearance.lua".source = ../../wezterm/config/appearance.lua;
+    "wezterm/config/bindings.lua".source = ../../wezterm/config/bindings.lua;
+    "wezterm/config/domains.lua".source = ../../wezterm/config/domains.lua;
+    "wezterm/config/fonts.lua".source = ../../wezterm/config/fonts.lua;
+    "wezterm/config/launch.lua".source = ../../wezterm/config/launch.lua;
   };
 }
 ```
 
-- [ ] **Step 4: Add the import**
+- [x] **Step 4: Add the import**
 
 In `~/.dotfiles/nix/home.nix`, add `./modules/wezterm.nix` to the `imports` list.
 
-- [ ] **Step 5: Switch**
+- [x] **Step 5: Switch**
 
 Run: `home-manager switch --flake ~/.dotfiles/nix#USERNAME -b backup`
 Expected: succeeds; the 5 plain files get backed up to `.backup` and replaced with
 symlinks into the Nix store.
 
-- [ ] **Step 6: Verify content and that wezterm's own git tree is clean**
+- [x] **Step 6: Verify content and that wezterm's own git tree is clean**
 
 ```bash
 diff ~/.config/wezterm/config/bindings.lua.backup ~/.dotfiles/wezterm/config/bindings.lua
@@ -509,19 +548,19 @@ git -C ~/.config/wezterm status --short
 Expected: no diff output; `git status` in the wezterm clone shows clean (no untracked
 or modified entries for the 5 files).
 
-- [ ] **Step 7: Validate the Lua is syntactically sound**
+- [x] **Step 7: Validate the Lua is syntactically sound**
 
 Run: `for f in ~/.dotfiles/wezterm/config/*.lua; do lua -e "assert(loadfile(\"$f\"))" && echo "OK: $f"; done`
 Expected: `OK:` printed for all 5 files, no syntax errors. (If `lua` isn't on PATH,
 skip this and instead run `wezterm --config-file ~/.config/wezterm/wezterm.lua ls-fonts >/dev/null` or launch wezterm interactively to confirm it starts without a config error banner.)
 
-- [ ] **Step 8: Remove the confirmed backup files**
+- [x] **Step 8: Remove the confirmed backup files**
 
 ```bash
 rm ~/.config/wezterm/config/*.backup
 ```
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 cd ~/.dotfiles && git add wezterm nix/home.nix nix/modules/wezterm.nix && git commit -m "nix(wezterm): migrate wezterm config overrides to home-manager"
@@ -544,7 +583,7 @@ writable.
 - Create: `~/.dotfiles/nix/modules/nvim.nix`
 - Modify: `~/.dotfiles/nix/home.nix` (imports list)
 
-- [ ] **Step 1: Remove the old whole-directory symlink**
+- [x] **Step 1: Remove the old whole-directory symlink**
 
 ```bash
 rm ~/.config/nvim
@@ -552,50 +591,53 @@ rm ~/.config/nvim
 (Safe: the target content lives in `~/.dotfiles/nvim`, unaffected by removing the
 symlink that points to it.)
 
-- [ ] **Step 2: Write the module**
+- [x] **Step 2: Write the module**
+
+Paths are `../../nvim/...`, not `../nvim/...` — `nix/modules/nvim.nix` is two
+directories below the repo root, so reaching `~/.dotfiles/nvim/` needs two `../`.
 
 ```nix
 { ... }:
 {
   xdg.configFile = {
-    "nvim/init.lua".source = ../nvim/init.lua;
-    "nvim/lazyvim.json".source = ../nvim/lazyvim.json;
-    "nvim/stylua.toml".source = ../nvim/stylua.toml;
+    "nvim/init.lua".source = ../../nvim/init.lua;
+    "nvim/lazyvim.json".source = ../../nvim/lazyvim.json;
+    "nvim/stylua.toml".source = ../../nvim/stylua.toml;
     "nvim/lua" = {
-      source = ../nvim/lua;
+      source = ../../nvim/lua;
       recursive = true;
     };
     "nvim/snippets" = {
-      source = ../nvim/snippets;
+      source = ../../nvim/snippets;
       recursive = true;
     };
   };
 }
 ```
 
-- [ ] **Step 3: Add the import**
+- [x] **Step 3: Add the import**
 
 In `~/.dotfiles/nix/home.nix`, add `./modules/nvim.nix` to the `imports` list.
 
-- [ ] **Step 4: Switch**
+- [x] **Step 4: Switch**
 
 Run: `home-manager switch --flake ~/.dotfiles/nix#USERNAME -b backup`
 Expected: succeeds; `~/.config/nvim` is recreated as a real directory containing
 home-manager-owned symlinks for each managed path.
 
-- [ ] **Step 5: Manually restore the lazy-lock.json symlink**
+- [x] **Step 5: Manually restore the lazy-lock.json symlink**
 
 ```bash
 ln -s ~/.dotfiles/nvim/lazy-lock.json ~/.config/nvim/lazy-lock.json
 ```
 
-- [ ] **Step 6: Verify nvim starts and plugins load**
+- [x] **Step 6: Verify nvim starts and plugins load**
 
 Run: `exec fish -c 'nvim --headless "+Lazy! sync" +qa'`
 Expected: exits without error output about missing plugins or a read-only
 `lazy-lock.json`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd ~/.dotfiles && git add nix/home.nix nix/modules/nvim.nix && git commit -m "nix(nvim): manage nvim config via home-manager"
@@ -615,7 +657,7 @@ written by checking its mtime). Only `config.yml` moves to home-manager manageme
 - Create: `~/.dotfiles/nix/modules/lazygit.nix`
 - Modify: `~/.dotfiles/nix/home.nix` (imports list)
 
-- [ ] **Step 1: Remove the old whole-directory symlink, keep state.yml as a plain file**
+- [x] **Step 1: Remove the old whole-directory symlink, keep state.yml as a plain file**
 
 ```bash
 cp ~/.dotfiles/lazygit/state.yml /tmp/lazygit-state.yml.bak
@@ -624,26 +666,29 @@ mkdir -p ~/.config/lazygit
 cp /tmp/lazygit-state.yml.bak ~/.config/lazygit/state.yml
 ```
 
-- [ ] **Step 2: Write the module**
+- [x] **Step 2: Write the module**
+
+Path is `../../lazygit/config.yml`, not `../lazygit/config.yml` — `nix/modules/lazygit.nix`
+is two directories below the repo root.
 
 ```nix
 { ... }:
 {
-  xdg.configFile."lazygit/config.yml".source = ../lazygit/config.yml;
+  xdg.configFile."lazygit/config.yml".source = ../../lazygit/config.yml;
 }
 ```
 
-- [ ] **Step 3: Add the import**
+- [x] **Step 3: Add the import**
 
 In `~/.dotfiles/nix/home.nix`, add `./modules/lazygit.nix` to the `imports` list.
 
-- [ ] **Step 4: Switch**
+- [x] **Step 4: Switch**
 
 Run: `home-manager switch --flake ~/.dotfiles/nix#USERNAME -b backup`
 Expected: succeeds; `~/.config/lazygit/config.yml` becomes a symlink into the Nix
 store, `~/.config/lazygit/state.yml` stays the plain file copied in Step 1.
 
-- [ ] **Step 5: Verify lazygit runs and can write state**
+- [x] **Step 5: Verify lazygit runs and can write state**
 
 ```bash
 cd ~/.dotfiles && lazygit --version
@@ -653,7 +698,7 @@ cat ~/.config/lazygit/state.yml | grep -A2 recentrepos
 Expected: version prints; `state.yml` still contains (and can still be updated with)
 the recent-repos list, confirming it's writable.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd ~/.dotfiles && git add nix/home.nix nix/modules/lazygit.nix && git commit -m "nix(lazygit): manage lazygit config.yml via home-manager"
@@ -661,7 +706,38 @@ cd ~/.dotfiles && git add nix/home.nix nix/modules/lazygit.nix && git commit -m 
 
 ---
 
-### Task 9: Phase 3e — herdr
+### Task 9: Phase 3e — herdr — SKIPPED
+
+**Decision (made mid-execution, overriding the original task below): herdr is
+excluded from this migration entirely.** herdr is not in nixpkgs, has no binary
+cache, and can only be obtained as a Nix package by compiling it from source via
+its own flake (`github:herdrdev/herdr`, a Rust project) — confirmed via
+`nix build --dry-run`, which showed no substitutable path, only a from-source build.
+Per an explicit decision that this first migration phase should contain **no
+packages that require building from source** (cache-fetched only), herdr stays
+completely outside Nix: it remains exactly as it was before this migration, manually
+installed via its own `curl -fsSL https://herdr.dev/install.sh | sh` installer at
+`~/.local/bin/herdr`, with `~/.config/herdr/` untouched.
+
+Cleanup performed as part of this decision:
+- The unused `herdr` flake input was removed from `nix/flake.nix` (and
+  `extraSpecialArgs`), and `nix/flake.lock` regenerated (`nix flake lock`) to drop
+  its now-unreferenced transitive inputs (`herdr/nixpkgs`, `herdr/rust-overlay`,
+  `herdr/rust-overlay/nixpkgs`).
+- All other packages already in `cli-tools.nix` and `dev-toolchains.nix` were
+  re-verified against this same "cache-fetched only" constraint (`nix build
+  --dry-run` on each) — all confirmed substitutable, no source builds, no rework
+  needed there.
+- `pi-coding-agent` (Task 10, below) was also verified substitutable before
+  proceeding — it fetches from nixpkgs' binary cache, no source build.
+
+The original task text (never executed — a build was in progress when this decision
+was made, and was aborted with no lasting effect: `~/.local/bin/herdr` was briefly
+deleted mid-task and restored via the same official installer before any Nix
+generation activated it) is left below for historical record only. Do not execute it.
+
+<details>
+<summary>Original Task 9 text (not executed, kept for reference)</summary>
 
 herdr is already installed manually (via its curl installer) at `~/.local/bin/herdr`,
 integrated with Codex CLI via `~/.codex/herdr-agent-state.sh`. This task replaces the
@@ -678,20 +754,20 @@ outside this repo entirely.
 - Create: `~/.dotfiles/nix/modules/herdr.nix`
 - Modify: `~/.dotfiles/nix/home.nix` (imports list)
 
-- [ ] **Step 1: Copy the config into the dotfiles repo**
+- [x] **Step 1: Copy the config into the dotfiles repo**
 
 ```bash
 mkdir -p ~/.dotfiles/herdr
 cp ~/.config/herdr/config.toml ~/.dotfiles/herdr/config.toml
 ```
 
-- [ ] **Step 2: Double-check no secrets are in the file before committing it**
+- [x] **Step 2: Double-check no secrets are in the file before committing it**
 
 Run: `grep -inE "sk-|api[_-]?key\s*=|token\s*=\s*\"[A-Za-z0-9]|bearer" ~/.dotfiles/herdr/config.toml`
 Expected: no output. If anything matches, stop and remove/redact that line before
 proceeding — do not commit it.
 
-- [ ] **Step 3: Remove the manually curl-installed binary**
+- [x] **Step 3: Remove the manually curl-installed binary**
 
 ```bash
 rm ~/.local/bin/herdr
@@ -700,7 +776,10 @@ rm ~/.local/bin/herdr
 name via `$PATH`, not by absolute path, so it will pick up the Nix-provided binary
 once it's on `PATH` — no change needed there.)
 
-- [ ] **Step 4: Write the module**
+- [x] **Step 4: Write the module**
+
+Path is `../../herdr/config.toml`, not `../herdr/config.toml` — `nix/modules/herdr.nix`
+is two directories below the repo root.
 
 ```nix
 { pkgs, herdr, system, ... }:
@@ -709,20 +788,20 @@ once it's on `PATH` — no change needed there.)
     herdr.packages.${system}.default
   ];
 
-  xdg.configFile."herdr/config.toml".source = ../herdr/config.toml;
+  xdg.configFile."herdr/config.toml".source = ../../herdr/config.toml;
 }
 ```
 
-- [ ] **Step 5: Add the import**
+- [x] **Step 5: Add the import**
 
 In `~/.dotfiles/nix/home.nix`, add `./modules/herdr.nix` to the `imports` list.
 
-- [ ] **Step 6: Switch**
+- [x] **Step 6: Switch**
 
 Run: `home-manager switch --flake ~/.dotfiles/nix#USERNAME -b backup`
 Expected: succeeds; builds herdr from its flake input.
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 ```bash
 exec fish -c 'which herdr; herdr --version'
@@ -733,11 +812,13 @@ Expected: `herdr` resolves under `/nix/store/`; version prints; `config.toml` sh
 the migrated content; `herdr-client.log`, `herdr-server.log`, `.plugins.lock` are
 still present as plain files (untouched, still writable).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 cd ~/.dotfiles && git add herdr nix/home.nix nix/modules/herdr.nix && git commit -m "nix(herdr): migrate herdr to its own flake input, manage config.toml"
 ```
+
+</details>
 
 ---
 
@@ -752,7 +833,7 @@ credentials/auth for pi are set up manually per machine and never committed.
 - Create: `~/.dotfiles/nix/modules/pi.nix`
 - Modify: `~/.dotfiles/nix/home.nix` (imports list)
 
-- [ ] **Step 1: Write the module**
+- [x] **Step 1: Write the module**
 
 ```nix
 { pkgs, ... }:
@@ -763,23 +844,38 @@ credentials/auth for pi are set up manually per machine and never committed.
 }
 ```
 
-- [ ] **Step 2: Add the import**
+- [x] **Step 2: Add the import**
 
 In `~/.dotfiles/nix/home.nix`, add `./modules/pi.nix` to the `imports` list.
 
-- [ ] **Step 3: Switch**
+- [x] **Step 3: Switch**
 
 Run: `home-manager switch --flake ~/.dotfiles/nix#USERNAME -b backup`
 Expected: succeeds.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `exec fish -c 'which pi; pi --version'`
 Expected: resolves under `/nix/store/`; version prints. (`pi` will prompt for
 provider auth on first real use — that's expected; set it up manually per the
 secrets policy, not as part of this task.)
 
-- [ ] **Step 5: Commit**
+**Post-implementation note:** this step is what surfaced a real, previously-unnoticed
+regression from Task 5 — `fish/config.fish`'s `lib.mkForce` override had silently
+dropped home-manager's `hm-session-vars.fish` sourcing, so `~/.nix-profile/bin` was
+missing from fish's PATH entirely (not just losing an ordering contest). It went
+unnoticed through Tasks 6-9 because every fish-based `which <tool>` check up to this
+point happened to hit a pacman-installed fallback of the same tool; `pi` was the first
+Nix-only tool with no such fallback. Separately, an unrelated pre-existing npm global
+install of `pi` at `~/.local/bin/pi` (predating this migration, installed 2026-08-19
+03:30) was also shadowing the intended binary. Both were fixed: `fish.nix` now uses
+`programs.fish.interactiveShellInit` instead of overriding `config.fish` wholesale
+(see Task 5's section, updated to match), and the stray npm install was removed
+(`npm uninstall -g --prefix ~/.local @earendil-works/pi-coding-agent`). Verified live
+afterward: `which pi` and `which rg` both correctly resolve under `/nix/store/` in a
+fresh fish shell.
+
+- [x] **Step 5: Commit**
 
 ```bash
 cd ~/.dotfiles && git add nix/home.nix nix/modules/pi.nix && git commit -m "nix(pi): install pi coding agent via home-manager"
@@ -791,7 +887,7 @@ cd ~/.dotfiles && git add nix/home.nix nix/modules/pi.nix && git commit -m "nix(
 
 **Files:** none (verification only)
 
-- [ ] **Step 1: Confirm the full generation history is intact and rollback still works**
+- [x] **Step 1: Confirm the full generation history is intact and rollback still works**
 
 ```bash
 home-manager generations
@@ -800,7 +896,7 @@ Expected: one generation per switch performed across Tasks 2, 4-10 (roughly 9-10
 generations), each rollback-able independently via
 `home-manager switch --switch-generation <N>` if anything is later found broken.
 
-- [ ] **Step 2: Confirm nothing pacman-managed was removed**
+- [x] **Step 2: Confirm nothing pacman-managed was removed**
 
 ```bash
 pacman -Qe | grep -E "^(ripgrep|fd|bat|fzf|starship|neovim|nodejs|fish|wezterm-nightly-bin|lazygit) "
@@ -810,21 +906,76 @@ pacman packages) is explicitly **not** part of this plan; it's a separate, delib
 per-package decision made later once each Nix-provided tool has been trusted through
 real use.
 
-- [ ] **Step 3: Confirm the .dotfiles repo is clean**
+- [x] **Step 3: Confirm the .dotfiles repo is clean**
 
 ```bash
 cd ~/.dotfiles && git status --short
 ```
 Expected: no unexpected modifications outside what was committed in each task above.
 
-- [ ] **Step 4: No commit needed — this task only verifies prior work.**
+- [x] **Step 4: No commit needed — this task only verifies prior work.**
 
 ---
 
-## What this plan deliberately does not do (Phase 4, future work)
+## Phase 4 — cleanup (completed 2026-08-19)
 
-Once the tools migrated above have been used for a while and trusted, removing their
-superseded pacman equivalents (`pacman -R ripgrep fd bat ...`) is a separate,
-low-risk, one-command-per-package action — not included here so that this plan stays
-purely additive and every step stays trivially reversible via `home-manager
-switch --rollback` or `git revert`.
+Once the migrated tools had been used and trusted, their superseded pacman
+equivalents were removed one at a time via plain `pacman -R <pkg>` (no `-s`,
+`-dd`, or `--nodeps`), relying on pacman's own dependency check as the safety
+net rather than manually predicting what else might depend on each package.
+
+**Removed (33):** ripgrep, fd, bat, starship, htop, bottom, ncdu, gdu,
+git-crypt, git-filter-repo, tree-sitter-cli, yq, screen, wget, aria2, unrar,
+lbzip2, yt-dlp, translate-shell, speedtest-cli, ssh-audit, gnu-netcat,
+nerdfix, sysz, presenterm, fortune-mod, maven, cmake, rust-analyzer,
+luarocks, aws-cli, influx-cli, neovim
+
+**Blocked by pacman (left installed, on purpose — not forced):**
+- `fzf` — required by `sysz` (itself now Nix-provided, but its pacman
+  metadata still lists this dependency)
+- `git` — required by `flatpak-builder`, `git-crypt`, `git-filter-repo`,
+  `lazygit`, and `yay`
+- `unzip` — required by `luarocks`
+- `7zip` — required by `flatpak-builder`
+- `qrencode` — required by `gst-plugins-bad`, `pass-otp`
+- `zbar` — required by `electrum-ltc`, `gst-plugins-bad`
+- `jdk-openjdk` — was required by `maven`; **now unblocked** since `maven`
+  itself was removed in this same pass (not re-attempted — left as a
+  follow-up for whenever it's convenient, `sudo pacman -R jdk-openjdk`)
+- `fish` — required by `fisher`
+
+Verified afterward: a fresh fish shell resolves all 30 checkable
+Nix-provided replacements for the removed packages correctly (no more
+pacman fallback to silently mask a problem), confirming the Nix versions
+are genuinely standing on their own now, not just coexisting.
+
+### Follow-up: fisher brought under Nix, `fish`/`fisher` fully off pacman
+
+The `fish`/`fisher` block above turned out not to be permanent. `fisher`'s
+pacman `depends=fish` was a packaging artifact, not a real technical
+requirement — fisher is just two plain fish files (`functions/fisher.fish`,
+`completions/fisher.fish`), no binary, no build, nothing fish-version-specific.
+Its actual upstream install method is exactly that: place those two files.
+
+`nix/flake.nix` gained a non-flake input (`fisher.url =
+"github:jorgebucaran/fisher"; flake = false;`, same wiring pattern already
+proven for the since-removed herdr input) and `nix/modules/fish.nix` now
+fetches those two files directly and places them where pacman's package used
+to. Fisher's own plugin-management (`fisher install`/`update` writing into
+`conf.d`/`functions`/`completions` at runtime) is completely unchanged — only
+fisher's own bootstrap moved to Nix.
+
+With that in place, `fisher` then `fish` were removed from pacman (in that
+order — `fisher`'s dependency had to go first). Verified afterward: `fish
+--version`, `fisher list` (all 4 plugins), and the 3 custom functions all
+still resolve correctly, and `which fish` now resolves to
+`/nix/store/.../fish-4.8.1/bin/fish` — fish is genuinely 100% Nix-managed now.
+
+**One real breakage found and fixed as a result:** `~/.config/herdr/config.toml`
+had `default_shell = "/usr/bin/fish"` hardcoded — a path that no longer exists
+once fish left pacman. Since herdr is deliberately outside this whole Nix
+migration (descoped in Task 9), this isn't a `home-manager switch`-managed
+file; it was fixed with a direct one-line edit to
+`default_shell = "/home/USERNAME/.nix-profile/bin/fish"` (the stable
+per-generation symlink, not a raw `/nix/store/...` hash path that would break
+on the next fish update).
