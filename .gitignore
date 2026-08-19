@@ -1,4 +1,6 @@
 lazygit/state.yml
+# Pi Calm runtime state must never be tracked (see tests/pi-calm.test.sh)
+/pi/agent/calm
 
 *.bak
 nvim/lazy-lock.json
