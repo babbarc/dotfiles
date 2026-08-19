@@ -2,6 +2,18 @@
 
 Date: 2026-08-19
 
+> **Post-implementation note:** the whole-branch code review that followed
+> implementation found that `config.toml`'s classification below (under
+> `modules/herdr.nix`) as purely user config was wrong — herdr's own binary
+> writes to it at runtime too (in-app `prefix+s` settings UI, `herdr config
+> reset-keys`), the same kind of runtime-write problem `modules/pi.nix`'s
+> settings.json has. Unlike settings.json, though, config.toml doesn't have a
+> clean "few managed fields, everything else runtime" split to build a merge
+> script against, so it was kept as a whole-file symlink rather than
+> redesigned — a deliberate, documented tradeoff, not an oversight. See the
+> comment on `xdg.configFile."herdr/config.toml"` in `herdr.nix` for the
+> full detail.
+
 ## Context
 
 Follow-on to `2026-08-19-nix-migration-design.md`, which moved most CLI/dev
@@ -186,7 +198,7 @@ in
         "$settings_file" ${pkgs.writeText "pi-settings-defaults.json" (builtins.toJSON managedDefaults)} \
         > "$settings_file.tmp" && $DRY_RUN_CMD mv "$settings_file.tmp" "$settings_file"
     else
-      $DRY_RUN_CMD cp ${pkgs.writeText "pi-settings-defaults.json" (builtins.toJSON managedDefaults)} "$settings_file"
+      $DRY_RUN_CMD install -m 644 ${pkgs.writeText "pi-settings-defaults.json" (builtins.toJSON managedDefaults)} "$settings_file"
     fi
   '';
 }

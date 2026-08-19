@@ -14,6 +14,13 @@
     jq   # required by the herdr runtime backend for JSON responses
   ];
 
+  # home.sessionVariables only reaches interactive shells (via
+  # hm-session-vars) — same gap nix/modules/session-path.nix documents for
+  # PATH: systemd --user never sources that file, so anything launched
+  # outside a shell wouldn't see these. Not an issue today since firstmate
+  # and herdr are both terminal-launched here, not GUI-launched. If that ever
+  # changes (a .desktop entry, a systemd unit), FM_HOME/FM_BACKEND would need
+  # their own environment.d fix the way session-path.nix does for PATH.
   home.sessionVariables = {
     FM_HOME = "${config.home.homeDirectory}/firstmate";
     # Pins the runtime backend declaratively instead of relying on
