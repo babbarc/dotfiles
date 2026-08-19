@@ -1,6 +1,6 @@
 { pkgs, ... }:
 {
-  home.packages = [
-    pkgs.pi-coding-agent
+  home.packages = with pkgs; [
+    pi-coding-agent
   ];
 }
