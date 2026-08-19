@@ -89,8 +89,24 @@ in
   # crw-rw---- root:input, both services now start unprompted.
   #
   # Default config lands at ~/.config/whisper-dictation/config.yaml on first
-  # run (super+period push-to-talk, medium whisper model — ~1.5GB, downloaded
-  # on first use via `whisper-cpp-download-ggml-model medium`; drop to `base`
-  # or `small` in that file first if the download size or transcription
-  # latency isn't worth it for a first test).
+  # run (super+period push-to-talk, medium whisper model). The model is NOT
+  # downloaded automatically on first use, despite what the daemon's error
+  # message implies at a glance — verified the hard way: it just errors
+  # "Whisper model not found" every time until fetched by hand:
+  #   <whisper-cpp store path>/bin/whisper-cpp-download-ggml-model medium ~/.local/share/whisper-models
+  # (whisper-cpp isn't on general PATH either, same as ydotool before it was
+  # added to home.packages above — only reachable through this package's own
+  # internal wrapper PATH. Find its current store path with
+  # `nix eval .#whisper-dictation... ` or `readlink -f $(command -v whisper-dictation)`
+  # and look at its buildInputs, or just: ls /nix/store/*-whisper-cpp-*/bin/.)
+  #
+  # A leaked keystroke while holding the hotkey is a known, accepted
+  # limitation, not a bug to chase here: the daemon monitors the keyboard via
+  # evdev but never calls EVIOCGRAB (verified: zero hits grepping daemon.py),
+  # so the raw key (and its OS-level key-repeat) reaches whatever window has
+  # focus same as any other keypress, for every one of the five keys their
+  # config schema supports. A real fix exists — grab the device exclusively
+  # for the hold duration, auto-backspace the one char that leaks before the
+  # grab lands — deliberately not implemented: it's a patch to their Python
+  # source we'd then own across updates, not a config change.
 }
