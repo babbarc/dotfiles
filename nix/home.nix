@@ -16,5 +16,6 @@
     ./modules/dev-toolchains.nix
     ./modules/fish.nix
     ./modules/wezterm.nix
+    ./modules/nvim.nix
   ];
 }
