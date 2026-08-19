@@ -20,6 +20,8 @@
     ./modules/nvim.nix
     ./modules/lazygit.nix
     ./modules/firstmate.nix
+    ./modules/npm-global.nix
+    ./modules/agent-cli-tools.nix
     ./modules/herdr.nix
     ./modules/pi.nix
     ./modules/fonts.nix
