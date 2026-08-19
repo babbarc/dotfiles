@@ -66,4 +66,18 @@ in
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/pi/extensions";
   home.file.".pi/agent/themes".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/pi/themes";
+
+  # Single source of truth for agent instructions, consumed by every agent
+  # runtime on this machine: pi reads ~/.pi/agent/AGENTS.md for its global
+  # context, claude reads ~/.claude/CLAUDE.md, codex reads ~/.codex/AGENTS.md.
+  # Same out-of-store symlink pattern as the extensions/themes above, so an
+  # edit here is picked up on the next session (pi: /reload, claude/codex:
+  # restart) without a home-manager switch. Adapted from kunchenguid/dotfiles
+  # home.nix; opencode is deliberately omitted, it is not installed here.
+  home.file.".pi/agent/AGENTS.md".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/pi/AGENTS.md";
+  home.file.".claude/CLAUDE.md".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/pi/AGENTS.md";
+  home.file.".codex/AGENTS.md".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/pi/AGENTS.md";
 }
