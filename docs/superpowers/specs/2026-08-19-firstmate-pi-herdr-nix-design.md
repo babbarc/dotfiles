@@ -167,13 +167,8 @@ instead of a symlink, a `home.activation` hook runs a `jq` merge on every
 ```nix
 { config, lib, pkgs, ... }:
 let
-  # theme kept at pi's current "dark" rather than adopting Kun's
-  # rose-pine-moon — that specific value was never reconfirmed after
-  # defaultProvider/defaultModel were carved out as unmanaged, so this
-  # preserves the current look rather than silently changing it. Easy to
-  # swap later.
   managedDefaults = {
-    theme = "dark";
+    theme = "rose-pine-moon";
     hideThinkingBlock = true;
     steeringMode = "all";
     followUpMode = "all";
