@@ -18,5 +18,6 @@
     ./modules/wezterm.nix
     ./modules/nvim.nix
     ./modules/lazygit.nix
+    ./modules/pi.nix
   ];
 }
