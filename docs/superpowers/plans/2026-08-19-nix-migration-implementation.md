@@ -362,8 +362,9 @@ cp -r ~/.config/fish/themes ~/.dotfiles/fish/themes
 
 - [ ] **Step 2: Write the module**
 
-**CORRECTED (post-implementation) — differs from the original draft below in three
-load-bearing ways, discovered while implementing this task:**
+**CORRECTED (post-implementation) — differs from the original draft below in
+several load-bearing ways, discovered while implementing this task and, in one
+case, while implementing Task 10:**
 1. `pkgs.fisher` does not exist in nixpkgs — there is no `home.packages`/`fisher`
    entry. Fisher stays exactly as pacman-installed today (`fisher 4.4.8-1`); only
    fish's config *content* moves to Nix.
@@ -371,20 +372,37 @@ load-bearing ways, discovered while implementing this task:**
    directories below the repo root (`nix/modules/`), so reaching `~/.dotfiles/fish/`
    needs two `../`, not one. (This same off-by-one existed in the original drafts of
    Tasks 6-9 below and has been corrected there too.)
-3. `"fish/config.fish"` needs `lib.mkForce`, because home-manager's own
-   `programs.fish` module (enabled since Task 1) already defines that same
-   `xdg.configFile` key internally — without `mkForce` this is a "conflicting
-   definition values" eval error, not a real ambiguity to resolve any other way.
+3. **`lib.mkForce` on `config.fish` was tried first, then reverted — it caused a
+   real regression.** `programs.fish` (enabled since Task 1) already defines
+   `xdg.configFile."fish/config.fish"` internally, so a plain second definition of
+   that key is a "conflicting definition values" eval error. `lib.mkForce` resolves
+   the eval error, but it does so by fully *replacing* home-manager's generated
+   config.fish — which silently dropped the `hm-session-vars.fish` sourcing that
+   adds `~/.nix-profile/bin` to PATH. The result: no Nix-installed package's binary
+   was reachable by bare name in any fish shell, for as long as this was in place.
+   This went undetected through Tasks 6-9 because their fish-based `which <tool>`
+   checks all happened to hit a pacman-installed fallback of the same tool; it
+   surfaced only in Task 10, on `pi` (the first Nix-only tool with no such
+   fallback). **Fixed** by using `programs.fish.interactiveShellInit` instead,
+   which lets home-manager keep generating config.fish (PATH setup included) while
+   still injecting the user's two lines (starship init, greeting suppression) into
+   it. `~/.dotfiles/fish/config.fish` was removed — its content now lives directly
+   in `interactiveShellInit` below, since a standalone file no longer being read by
+   anything would be a stale, misleading duplicate.
 
 ```nix
-{ lib, ... }:
+{ ... }:
 {
   # programs.fish.enable is already set in home.nix (Task 1).
   # fisher itself stays pacman-managed (fisher 4.4.8-1) — it isn't packaged in
   # nixpkgs; only fish's config content is migrated here.
 
+  programs.fish.interactiveShellInit = ''
+    starship init fish | source
+    set -g fish_greeting
+  '';
+
   xdg.configFile = {
-    "fish/config.fish".source = lib.mkForce ../../fish/config.fish;
     "fish/conf.d/fish_frozen_theme.fish".source = ../../fish/conf.d/fish_frozen_theme.fish;
     "fish/conf.d/fish_frozen_key_bindings.fish".source = ../../fish/conf.d/fish_frozen_key_bindings.fish;
     "fish/functions/fish_greeting.fish".source = ../../fish/functions/fish_greeting.fish;
@@ -841,6 +859,21 @@ Run: `exec fish -c 'which pi; pi --version'`
 Expected: resolves under `/nix/store/`; version prints. (`pi` will prompt for
 provider auth on first real use — that's expected; set it up manually per the
 secrets policy, not as part of this task.)
+
+**Post-implementation note:** this step is what surfaced a real, previously-unnoticed
+regression from Task 5 — `fish/config.fish`'s `lib.mkForce` override had silently
+dropped home-manager's `hm-session-vars.fish` sourcing, so `~/.nix-profile/bin` was
+missing from fish's PATH entirely (not just losing an ordering contest). It went
+unnoticed through Tasks 6-9 because every fish-based `which <tool>` check up to this
+point happened to hit a pacman-installed fallback of the same tool; `pi` was the first
+Nix-only tool with no such fallback. Separately, an unrelated pre-existing npm global
+install of `pi` at `~/.local/bin/pi` (predating this migration, installed 2026-08-19
+03:30) was also shadowing the intended binary. Both were fixed: `fish.nix` now uses
+`programs.fish.interactiveShellInit` instead of overriding `config.fish` wholesale
+(see Task 5's section, updated to match), and the stray npm install was removed
+(`npm uninstall -g --prefix ~/.local @earendil-works/pi-coding-agent`). Verified live
+afterward: `which pi` and `which rg` both correctly resolve under `/nix/store/` in a
+fresh fish shell.
 
 - [ ] **Step 5: Commit**
 
