@@ -18,9 +18,18 @@ let
   # actual runtime closure at service-start time. Confirmed working: with
   # this, `whisper-dictation --help` prints its real argparse usage instead
   # of a traceback.
+  #
+  # nix-store must be referenced by its Nix-managed store path (pkgs.nix),
+  # not bare on PATH: systemd --user's own PATH is
+  # `~/.nix-profile/bin:/usr/local/bin:/usr/bin` (verified with `systemd-run
+  # --user --pipe --wait -- sh -c 'command -v nix-store'`) — it never
+  # includes the base Nix installation's own bin dir the way an interactive
+  # login shell does. A bare `nix-store` call here silently resolved to
+  # nothing, GI_TYPELIB_PATH came out empty, and the service hit the exact
+  # same ImportError this wrapper exists to fix.
   wrappedBin = pkgs.writeShellScript "whisper-dictation-wrapped" ''
     export GI_TYPELIB_PATH="$(
-      nix-store -qR ${whisperDictationPkg} |
+      ${pkgs.nix}/bin/nix-store -qR ${whisperDictationPkg} |
         while read -r p; do
           [ -d "$p/lib/girepository-1.0" ] && printf '%s:' "$p/lib/girepository-1.0"
         done
