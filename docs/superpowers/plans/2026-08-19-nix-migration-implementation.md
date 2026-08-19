@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Move user-space CLI/dev tooling and select dotfiles (fish, wezterm overrides, nvim, lazygit, herdr, pi) from pacman/yay to Nix, managed by standalone `home-manager` on top of the existing Arch install, in four phases with verified rollback at each step.
+**Goal:** Move user-space CLI/dev tooling and select dotfiles (fish, wezterm overrides, nvim, lazygit, pi) from pacman/yay to Nix, managed by standalone `home-manager` on top of the existing Arch install, in four phases with verified rollback at each step. herdr was descoped mid-execution (see Task 9) — it requires a from-source build with no binary cache, which conflicts with a "cache-fetched packages only" constraint set for this phase; it stays outside Nix entirely.
 
 **Architecture:** A new flake at `~/.dotfiles/nix/` (versioned in the existing `~/.dotfiles` git repo) defines one `homeConfigurations."USERNAME"` built from `home.nix`, which imports one module per concern under `nix/modules/`. Dotfile content is fully owned by home-manager (copied into the Nix store, not out-of-store symlinks) except for files a program writes back to at runtime (`fish_variables`, lazygit's `state.yml`, nvim's `lazy-lock.json`), which are deliberately left unmanaged so they stay writable.
 
-**Tech Stack:** Nix flakes, standalone home-manager (`nix-community/home-manager`), nixpkgs unstable, one custom flake input (`github:herdrdev/herdr`).
+**Tech Stack:** Nix flakes, standalone home-manager (`nix-community/home-manager`), nixpkgs unstable. No custom flake inputs — the originally-planned `github:herdrdev/herdr` input was added in Task 1 and removed in Task 9 once herdr was descoped (it can't be cache-fetched).
 
 ---
 
@@ -31,8 +31,8 @@ These were confirmed against nixpkgs unstable via `nix search`/`nix eval` before
 | nodejs (matches pacman's `nodejs 26.x`) | `nodejs_26` | plain `nodejs`/`nodejs_latest` currently resolves to 24.19.0, not 26 |
 | python interpreter | `python3` | |
 | jdk | `jdk` | resolves to OpenJDK 21 in nixpkgs unstable at time of writing — older than pacman's `jdk-openjdk 26`; acceptable per spec (no nixpkgs 26 available) |
-| pi coding agent | `pi-coding-agent` | binary name is `pi` |
-| herdr | not in nixpkgs — flake input `github:herdrdev/herdr`, output `packages.x86_64-linux.default` (currently `herdr-0.8.1`) | |
+| pi coding agent | `pi-coding-agent` | binary name is `pi`; verified cache-fetched (`nix build --dry-run`), no source build |
+| herdr | not in nixpkgs, no binary cache — would require a from-source build via its own flake (`github:herdrdev/herdr`). **Descoped in Task 9**; stays outside Nix entirely, not installed by this plan. |
 
 All `nix search`/`nix eval` commands below assume flakes + `nix-command` are enabled, which they already are (`experimental-features = fetch-tree flakes nix-command` confirmed in this session).
 
@@ -688,7 +688,38 @@ cd ~/.dotfiles && git add nix/home.nix nix/modules/lazygit.nix && git commit -m 
 
 ---
 
-### Task 9: Phase 3e — herdr
+### Task 9: Phase 3e — herdr — SKIPPED
+
+**Decision (made mid-execution, overriding the original task below): herdr is
+excluded from this migration entirely.** herdr is not in nixpkgs, has no binary
+cache, and can only be obtained as a Nix package by compiling it from source via
+its own flake (`github:herdrdev/herdr`, a Rust project) — confirmed via
+`nix build --dry-run`, which showed no substitutable path, only a from-source build.
+Per an explicit decision that this first migration phase should contain **no
+packages that require building from source** (cache-fetched only), herdr stays
+completely outside Nix: it remains exactly as it was before this migration, manually
+installed via its own `curl -fsSL https://herdr.dev/install.sh | sh` installer at
+`~/.local/bin/herdr`, with `~/.config/herdr/` untouched.
+
+Cleanup performed as part of this decision:
+- The unused `herdr` flake input was removed from `nix/flake.nix` (and
+  `extraSpecialArgs`), and `nix/flake.lock` regenerated (`nix flake lock`) to drop
+  its now-unreferenced transitive inputs (`herdr/nixpkgs`, `herdr/rust-overlay`,
+  `herdr/rust-overlay/nixpkgs`).
+- All other packages already in `cli-tools.nix` and `dev-toolchains.nix` were
+  re-verified against this same "cache-fetched only" constraint (`nix build
+  --dry-run` on each) — all confirmed substitutable, no source builds, no rework
+  needed there.
+- `pi-coding-agent` (Task 10, below) was also verified substitutable before
+  proceeding — it fetches from nixpkgs' binary cache, no source build.
+
+The original task text (never executed — a build was in progress when this decision
+was made, and was aborted with no lasting effect: `~/.local/bin/herdr` was briefly
+deleted mid-task and restored via the same official installer before any Nix
+generation activated it) is left below for historical record only. Do not execute it.
+
+<details>
+<summary>Original Task 9 text (not executed, kept for reference)</summary>
 
 herdr is already installed manually (via its curl installer) at `~/.local/bin/herdr`,
 integrated with Codex CLI via `~/.codex/herdr-agent-state.sh`. This task replaces the
@@ -768,6 +799,8 @@ still present as plain files (untouched, still writable).
 ```bash
 cd ~/.dotfiles && git add herdr nix/home.nix nix/modules/herdr.nix && git commit -m "nix(herdr): migrate herdr to its own flake input, manage config.toml"
 ```
+
+</details>
 
 ---
 
