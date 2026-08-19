@@ -13,7 +13,10 @@
   outputs = { self, nixpkgs, home-manager, herdr, ... }:
     let
       system = "x86_64-linux";
-      pkgs = import nixpkgs { inherit system; };
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [ "unrar" ];
+      };
     in
     {
       homeConfigurations."USERNAME" = home-manager.lib.homeManagerConfiguration {
