@@ -15,6 +15,7 @@
     ./modules/cli-tools.nix
     ./modules/dev-toolchains.nix
     ./modules/fish.nix
+    ./modules/session-path.nix
     ./modules/wezterm.nix
     ./modules/nvim.nix
     ./modules/lazygit.nix
