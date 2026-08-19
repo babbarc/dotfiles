@@ -917,10 +917,35 @@ Expected: no unexpected modifications outside what was committed in each task ab
 
 ---
 
-## What this plan deliberately does not do (Phase 4, future work)
+## Phase 4 — cleanup (completed 2026-08-19)
 
-Once the tools migrated above have been used for a while and trusted, removing their
-superseded pacman equivalents (`pacman -R ripgrep fd bat ...`) is a separate,
-low-risk, one-command-per-package action — not included here so that this plan stays
-purely additive and every step stays trivially reversible via `home-manager
-switch --rollback` or `git revert`.
+Once the migrated tools had been used and trusted, their superseded pacman
+equivalents were removed one at a time via plain `pacman -R <pkg>` (no `-s`,
+`-dd`, or `--nodeps`), relying on pacman's own dependency check as the safety
+net rather than manually predicting what else might depend on each package.
+
+**Removed (33):** ripgrep, fd, bat, starship, htop, bottom, ncdu, gdu,
+git-crypt, git-filter-repo, tree-sitter-cli, yq, screen, wget, aria2, unrar,
+lbzip2, yt-dlp, translate-shell, speedtest-cli, ssh-audit, gnu-netcat,
+nerdfix, sysz, presenterm, fortune-mod, maven, cmake, rust-analyzer,
+luarocks, aws-cli, influx-cli, neovim
+
+**Blocked by pacman (left installed, on purpose — not forced):**
+- `fzf` — required by `sysz` (itself now Nix-provided, but its pacman
+  metadata still lists this dependency)
+- `git` — required by `flatpak-builder`, `git-crypt`, `git-filter-repo`,
+  `lazygit`, and `yay`
+- `unzip` — required by `luarocks`
+- `7zip` — required by `flatpak-builder`
+- `qrencode` — required by `gst-plugins-bad`, `pass-otp`
+- `zbar` — required by `electrum-ltc`, `gst-plugins-bad`
+- `jdk-openjdk` — was required by `maven`; **now unblocked** since `maven`
+  itself was removed in this same pass (not re-attempted — left as a
+  follow-up for whenever it's convenient, `sudo pacman -R jdk-openjdk`)
+- `fish` — required by `fisher` (which stays pacman-managed permanently,
+  per Task 5 — this block is expected to be permanent, not a follow-up)
+
+Verified afterward: a fresh fish shell resolves all 30 checkable
+Nix-provided replacements for the removed packages correctly (no more
+pacman fallback to silently mask a problem), confirming the Nix versions
+are genuinely standing on their own now, not just coexisting.
