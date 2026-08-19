@@ -7,9 +7,16 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # fisher isn't packaged in nixpkgs and has no flake of its own — it's just
+    # two plain fish files (functions/fisher.fish, completions/fisher.fish).
+    # `flake = false` pulls the raw source tree instead of expecting flake outputs.
+    fisher = {
+      url = "github:jorgebucaran/fisher";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }:
+  outputs = { self, nixpkgs, home-manager, fisher, ... }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -22,7 +29,7 @@
     {
       homeConfigurations."USERNAME" = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        extraSpecialArgs = { inherit system; };
+        extraSpecialArgs = { inherit system fisher; };
         modules = [ ./home.nix ];
       };
     };

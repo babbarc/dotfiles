@@ -1,8 +1,20 @@
-{ ... }:
+{ fisher, ... }:
 {
   # programs.fish.enable is already set in home.nix (Task 1).
-  # fisher itself stays pacman-managed (fisher 4.4.8-1) — it isn't packaged
-  # in nixpkgs; only fish's config content is migrated here.
+  #
+  # fisher itself: originally left pacman-managed since it isn't packaged in
+  # nixpkgs. Revisited later — fisher's entire pacman package is just two
+  # plain fish files (functions/fisher.fish, completions/fisher.fish), no
+  # binary, no build. pacman only blocked removing its own `fish` package
+  # because *its* fisher package declares a `fish` dependency in pacman's
+  # metadata — a packaging artifact, not a real technical requirement (fisher
+  # is plain fish scripting, no fish-version-specific internals). So instead
+  # of relying on nixpkgs packaging fisher, its two files are fetched directly
+  # from upstream via the `fisher` flake input (a non-flake source fetch, see
+  # flake.nix) and placed exactly where pacman's package used to put them.
+  # Fisher's actual plugin-management behavior (fisher install/update writing
+  # into conf.d/functions/completions) is unchanged — only fisher's own
+  # bootstrap moved to Nix.
 
   # NOTE ON A REAL REGRESSION FOUND AND FIXED HERE: this module originally used
   # `xdg.configFile."fish/config.fish".source = lib.mkForce ../../fish/config.fish;`
@@ -22,6 +34,8 @@
   '';
 
   xdg.configFile = {
+    "fish/functions/fisher.fish".source = "${fisher}/functions/fisher.fish";
+    "fish/completions/fisher.fish".source = "${fisher}/completions/fisher.fish";
     "fish/conf.d/fish_frozen_theme.fish".source = ../../fish/conf.d/fish_frozen_theme.fish;
     "fish/conf.d/fish_frozen_key_bindings.fish".source = ../../fish/conf.d/fish_frozen_key_bindings.fish;
     "fish/functions/fish_greeting.fish".source = ../../fish/functions/fish_greeting.fish;

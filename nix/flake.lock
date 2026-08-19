@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "fisher": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1769320735,
+        "narHash": "sha256-U1yd8m56YrHXrJFkU8xaOglulOGV0iBvwjU/bdf8tqA=",
+        "owner": "jorgebucaran",
+        "repo": "fisher",
+        "rev": "791da644d33d392216f6b1a9b5fc1e470db6d7f2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jorgebucaran",
+        "repo": "fisher",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -38,6 +54,7 @@
     },
     "root": {
       "inputs": {
+        "fisher": "fisher",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs"
       }
