@@ -7,3 +7,4 @@ vim.filetype.add({
   },
 })
 vim.opt.clipboard = "unnamedplus"
+vim.o.shell = "fish"
