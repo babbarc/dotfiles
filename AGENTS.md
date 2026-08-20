@@ -29,6 +29,10 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   derivation evaluates and builds. Validate with:
   `nix build ./nix#nixosConfigurations.wsl.config.system.build.toplevel --no-link`.
 - `nix flake check ./nix` checks all three outputs together.
+- **Fresh-machine bootstrap** - `nix/setup-server.sh` does the whole one-shot
+  bring-up for the laptop/server hosts (enable flakes via sudo, pre-flight the
+  repo for the pure-eval symlink trap, build + activate). See README's
+  'Fresh machine setup'; `--dry-run` previews without sudo or a build.
 
 Portable dev tooling (shell, editor, language toolchains, git/CLI utilities,
 agent-CLI config) lives in `nix/modules/dev/` (imported as a unit via

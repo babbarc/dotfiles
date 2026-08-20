@@ -7,6 +7,30 @@ every time.
 These are personal dotfiles, shared publicly so people can read them, learn
 from them, and fork them freely.
 
+## Fresh machine setup
+
+For a fresh standalone Arch-style host (the `laptop` or `server` output), the
+`nix/setup-server.sh` script drives the whole bootstrap in one shot - it enables
+Nix flakes, pre-flights the repo for the pure-eval symlink trap, and builds and
+activates the host's home-manager generation.
+
+```sh
+# 1. Install Nix (multi-user) and clone this repo to ~/.dotfiles
+sh <(curl -L https://nixos.org/nix/install) --daemon
+git clone <this-repo> ~/.dotfiles
+
+# 2. Bootstrap - auto-detects the host from `hostname` (or pass it explicitly:
+#    `... setup-server.sh server`). Needs sudo for the flakes toggle.
+~/.dotfiles/nix/setup-server.sh
+
+# 3. Authenticate gh - interactive OAuth, the one step that stays manual
+gh auth login
+```
+
+Run `~/.dotfiles/nix/setup-server.sh --dry-run` first to preview the exact
+commands without sudo or a build. See the host-specific sections under Bootstrap
+below for the manual equivalent of each step.
+
 ## What you get
 
 Running the switch builds:
