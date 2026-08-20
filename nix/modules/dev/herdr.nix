@@ -42,12 +42,17 @@
   # manual command from the README. `||`-guarded so a failed curl (no
   # network) only warns on stderr instead of failing the whole
   # `home-manager switch`.
+  # Activation scripts replace PATH with pinned store utils only (no
+  # /usr/bin, no ~/.local/bin), so prepend ~/.local/bin (so an already-
+  # installed herdr is seen by the guard) plus curl and awk (gawk) - which
+  # install.sh needs by bare name (`need curl; need awk`).
   home.activation.herdrInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    PATH="$HOME/.local/bin:${pkgs.curl}/bin:${pkgs.gawk}/bin:$PATH"
     if ! command -v herdr >/dev/null 2>&1; then
       if [ -n "$DRY_RUN_CMD" ]; then
         echo "$DRY_RUN_CMD would install herdr via: curl -fsSL https://herdr.dev/install.sh | sh"
       else
-        ${pkgs.curl}/bin/curl -fsSL https://herdr.dev/install.sh | sh \
+        ${pkgs.curl}/bin/curl -fsSL https://herdr.dev/install.sh | PATH="${pkgs.curl}/bin:${pkgs.gawk}/bin:$PATH" sh \
           || echo "warning: herdr install failed (offline?) - retry later with: curl -fsSL https://herdr.dev/install.sh | sh" >&2
       fi
     fi
