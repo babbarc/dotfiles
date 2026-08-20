@@ -17,6 +17,8 @@
     ./modules/fish.nix
     ./modules/session-path.nix
     ./modules/wezterm.nix
+    ./modules/sway.nix
+    ./modules/waybar.nix
     ./modules/nvim.nix
     ./modules/lazygit.nix
     ./modules/firstmate.nix
