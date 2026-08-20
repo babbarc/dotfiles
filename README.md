@@ -113,7 +113,7 @@ How each consumer reads it:
   `env.example` and is overridden per machine, so pure evaluation never reads
   the file directly:
   ```sh
-  nix build ~/.dotfiles?dir=nix#homeConfigurations.laptop.activationPackage \
+  nix build path:$HOME/.dotfiles?dir=nix#homeConfigurations.laptop.activationPackage \
     --override-input dotfiles-env path:$HOME/.config/dotfiles/env
   ```
   `nix/setup-server.sh` wires the override in for you and errors with a
@@ -136,15 +136,19 @@ the committed `env.example` (pure evaluation can't read the file directly;
 see "Per-machine values" above). Omitting it silently builds with the
 placeholder values from `env.example`.
 
-> **Flake ref form.** All flake refs use the repo-ROOT form with `?dir=nix`
-> (e.g. `~/.dotfiles?dir=nix#laptop`), never a bare path into `nix/`
-> (`~/.dotfiles/nix#laptop`). Modules under `nix/modules/dev/` reference
-> repo-root files (like `nvim/` and `fish/`) via `../../../`-style relative
-> paths, so the flake source must be the whole repo. A bare `nix/` path ref
-> makes nix treat the `nix/` directory as the source; those relative paths then
-> escape to `/nix/store` and pure evaluation fails.
+> **Flake ref form.** Local filesystem refs use the repo-ROOT form with the
+> `path:` scheme and `?dir=nix` (e.g. `path:$HOME/.dotfiles?dir=nix#laptop`),
+> never a bare path into `nix/` (`~/.dotfiles/nix#laptop`). Nix ignores
+> `?dir=nix` on a scheme-less path, so local refs MUST start with `path:`;
+> remote URLs (`http://` tarballs, `git+http`, `https` GitHub) are fine as-is.
+> Use `$HOME` (not `~`) inside `path:` URLs - neither the shell nor nix
+> expands a `~` that isn't at the start of a word. Modules under
+> `nix/modules/dev/` reference repo-root files (like `nvim/` and `fish/`) via
+> `../../../`-style relative paths, so the flake source must be the whole repo.
+> A bare `nix/` path ref makes nix treat the `nix/` directory as the source;
+> those relative paths then escape to `/nix/store` and pure evaluation fails.
 ```sh
-home-manager switch --flake ~/.dotfiles?dir=nix#laptop \
+home-manager switch --flake path:$HOME/.dotfiles?dir=nix#laptop \
   --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
 ```
 
@@ -159,12 +163,12 @@ Standalone home-manager on Arch Linux, which isn't NixOS.
 3. `home-manager` isn't installed yet, so build and activate the flake output
    directly:
    ```sh
-   nix build ~/.dotfiles?dir=nix#homeConfigurations.laptop.activationPackage
+   nix build path:$HOME/.dotfiles?dir=nix#homeConfigurations.laptop.activationPackage
    ./result/activate
    ```
    That puts `home-manager` on `PATH`. From then on:
    ```sh
-   home-manager switch --flake ~/.dotfiles?dir=nix#laptop \
+   home-manager switch --flake path:$HOME/.dotfiles?dir=nix#laptop \
      --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
    ```
 
@@ -178,12 +182,12 @@ display.
 2. Clone this repo to `~/.dotfiles`.
 3. Build and activate:
    ```sh
-   nix build ~/.dotfiles?dir=nix#homeConfigurations.server.activationPackage
+   nix build path:$HOME/.dotfiles?dir=nix#homeConfigurations.server.activationPackage
    ./result/activate
    ```
    From then on:
    ```sh
-   home-manager switch --flake ~/.dotfiles?dir=nix#server \
+   home-manager switch --flake path:$HOME/.dotfiles?dir=nix#server \
      --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
    ```
 
@@ -251,10 +255,10 @@ hand - still nix-only):
    with the same override, then `HOME_MANAGER_BACKUP_EXT=backup ./result/activate`.
 6. Update later:
    ```sh
-   sudo nixos-rebuild switch --flake ~/.dotfiles?dir=nix#wsl \
+   sudo nixos-rebuild switch --flake path:$HOME/.dotfiles?dir=nix#wsl \
      --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
    # non-NixOS WSL instead:
-   #   home-manager switch --flake ~/.dotfiles?dir=nix#server \
+   #   home-manager switch --flake path:$HOME/.dotfiles?dir=nix#server \
    #     --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
    ```
 

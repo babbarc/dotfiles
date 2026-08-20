@@ -21,8 +21,10 @@
 #
 # The build evaluates the flake from the remote URL without a checkout, with
 # the per-machine env file fed in as an input override (pure evaluation stays
-# intact; the override is not written to flake.lock):
-#   nix build '<url>?dir=nix#<attr>' \
+# intact; the override is not written to flake.lock). LOCAL filesystem refs
+# must carry the path: scheme (nix ignores ?dir=nix on a bare path); remote
+# URLs need no prefix:
+#   nix build 'path:<url>?dir=nix#<attr>' \
 #     --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
 #
 # Usage:
@@ -399,7 +401,7 @@ case "$SOURCE" in
   2)
     if [ "$HAS_GIT" -eq 1 ]; then
       REPO_PLAN="git clone the public GitHub mirror ($GH_URL) to $HOME/.dotfiles"
-      BUILD_FLAKE="$HOME/.dotfiles?dir=nix"
+      BUILD_FLAKE="path:$HOME/.dotfiles?dir=nix"
     else
       REPO_PLAN="fetch the repo tarball from the GitHub mirror ($GH_TARBALL) with nix-prefetch-url and unpack it to $HOME/.dotfiles"
       BUILD_FLAKE="$GH_TARBALL?dir=nix"
@@ -407,7 +409,7 @@ case "$SOURCE" in
     ;;
   3)
     REPO_PLAN="use the existing checkout at $LOCAL_REPO"
-    BUILD_FLAKE="$LOCAL_REPO?dir=nix"
+    BUILD_FLAKE="path:$LOCAL_REPO?dir=nix"
     if [ "$LOCAL_REPO" != "$HOME/.dotfiles" ]; then
       UPDATE_REPO="$LOCAL_REPO"
     fi
@@ -593,11 +595,11 @@ fi
 echo
 echo "Update this machine later:"
 if [ "$IS_NIXOS" -eq 1 ]; then
-  echo "  sudo nixos-rebuild switch --flake $UPDATE_REPO?dir=nix#wsl --override-input dotfiles-env path:$HOME/.config/dotfiles/env"
+  echo "  sudo nixos-rebuild switch --flake path:$UPDATE_REPO?dir=nix#wsl --override-input dotfiles-env path:$HOME/.config/dotfiles/env"
 else
-  echo "  home-manager switch --flake $UPDATE_REPO?dir=nix#server --override-input dotfiles-env path:$HOME/.config/dotfiles/env"
+  echo "  home-manager switch --flake path:$UPDATE_REPO?dir=nix#server --override-input dotfiles-env path:$HOME/.config/dotfiles/env"
 fi
-echo "  (or just re-run $UPDATE_REPO?dir=nix/setup-wsl.sh - it re-detects everything)"
+echo "  (or just re-run $UPDATE_REPO/nix/setup-wsl.sh - it re-detects everything)"
 echo
 echo "SSH/GPG keys and other credentials are per-machine and NOT managed by this"
 echo "repo - set them up on this machine yourself (README: 'Keys and credentials')."

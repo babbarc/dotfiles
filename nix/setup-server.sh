@@ -7,8 +7,10 @@
 # No wrappers, no config layers.
 #
 # The flake lives in the nix/ SUBDIRECTORY, so the ref must use the repo-root
-# ?dir=nix form (dev modules climb up to repo-root files):
-#   <repo>?dir=nix#homeConfigurations.<host>.activationPackage
+# ?dir=nix form (dev modules climb up to repo-root files). Nix ignores
+# ?dir=nix on a bare path, so a LOCAL ref must start with the path: scheme:
+#   path:$REPO?dir=nix#homeConfigurations.<host>.activationPackage
+# (remote URLs need no path: prefix).
 # and activation needs HOME_MANAGER_BACKUP_EXT so pre-existing files are renamed
 # instead of deleted.
 #
@@ -249,7 +251,7 @@ fi
 
 # --- dry-run: print what would run, then stop --------------------------------
 
-BUILD_REF="$REPO?dir=nix#homeConfigurations.$HOST.activationPackage"
+BUILD_REF="path:$REPO?dir=nix#homeConfigurations.$HOST.activationPackage"
 BUILD_ARGS=(--override-input dotfiles-env "path:$ENV_FILE")
 [ "$IMPURE" -eq 1 ] && BUILD_ARGS+=(--impure)
 
