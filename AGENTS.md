@@ -57,6 +57,17 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   Both tools accept `--override-input` (home-manager passes it through;
   nixos-rebuild at the locked nixpkgs rev is nixos-rebuild-ng, which supports
   it). Never print a bare switch command in docs.
+- **Flake refs must be the repo-ROOT `?dir=nix` form** - never a bare absolute
+  path into `nix/` (`~/.dotfiles/nix#...` or `path:.../dotfiles/nix#...`).
+  Modules under `nix/modules/dev/` reference repo-root files (`nvim/`, `fish/`,
+  etc.) via `../../../` relative paths, so the flake source must be the whole
+  repo. An absolute `nix/`-directory path ref makes nix treat `nix/` as the
+  source, those paths escape to `/nix/store`, and pure eval fails with
+  "access to absolute path '/nix/store/nvim/lua' is forbidden". The working
+  form is the repo ROOT: `path:.../dotfiles?dir=nix#...` (or
+  `~/.dotfiles?dir=nix#...`). A RELATIVE git ref like `./nix#...` from inside
+  the repo is fine (git-flake semantics use the whole git tree). Tarball/git-URL
+  flakes already source the whole repo and use `?dir=nix` in the URL.
 
 Portable dev tooling (shell, editor, language toolchains, git/CLI utilities,
 agent-CLI config) lives in `nix/modules/dev/` (imported as a unit via

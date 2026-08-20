@@ -6,8 +6,9 @@
 # trap, then build and activate the host's home-manager activation package.
 # No wrappers, no config layers.
 #
-# The flake lives in the nix/ SUBDIRECTORY, so the ref is
-#   <repo>/nix#homeConfigurations.<host>.activationPackage
+# The flake lives in the nix/ SUBDIRECTORY, so the ref must use the repo-root
+# ?dir=nix form (dev modules climb up to repo-root files):
+#   <repo>?dir=nix#homeConfigurations.<host>.activationPackage
 # and activation needs HOME_MANAGER_BACKUP_EXT so pre-existing files are renamed
 # instead of deleted.
 #
@@ -248,7 +249,7 @@ fi
 
 # --- dry-run: print what would run, then stop --------------------------------
 
-BUILD_REF="$REPO/nix#homeConfigurations.$HOST.activationPackage"
+BUILD_REF="$REPO?dir=nix#homeConfigurations.$HOST.activationPackage"
 BUILD_ARGS=(--override-input dotfiles-env "path:$ENV_FILE")
 [ "$IMPURE" -eq 1 ] && BUILD_ARGS+=(--impure)
 
