@@ -4,7 +4,8 @@
 #         without any warranty.
 #         Copyright 2012— Gregory Pakosz (@gpakosz).
 
-set -g default-shell /usr/bin/fish
+# tmux intentionally inherits the login shell (the Nix-managed fish on the configured
+# hosts), so no per-host default-shell path is set here and can go stale.
 
 # -- bindings ------------------------------------------------------------------
 
