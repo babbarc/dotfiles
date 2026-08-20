@@ -41,8 +41,22 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   `fish/conf.d/dotfiles-env.fish`, and `.zshrc` sources it for zsh.
 - **Fresh-machine bootstrap** - `nix/setup-server.sh` does the whole one-shot
   bring-up for the laptop/server hosts (enable flakes via sudo, pre-flight the
-  repo for the pure-eval symlink trap, build + activate). See README's
-  'Fresh machine setup'; `--dry-run` previews without sudo or a build.
+  repo for the pure-eval symlink trap, build + activate). `nix/setup-wsl.sh`
+  is the interactive WSL sibling: detects distro (NixOS-WSL ->
+  `nixosConfigurations.wsl` toplevel + switch-to-configuration, any other
+  distro -> `homeConfigurations.server` activation), fetches the repo itself
+  via `nix-prefetch-url --unpack` (nix-only, no git needed; LAN Gitea tarball
+  or GitHub mirror), prompts for every `env.example` key, writes
+  `~/.config/dotfiles/env`, then builds from the remote URL with
+  `--override-input dotfiles-env path:$HOME/.config/dotfiles/env`. See README's
+  'Bootstrap'; `--dry-run` previews without changing anything.
+- **Every flake switch needs the env override** - `nixos-rebuild switch`/
+  `home-manager switch --flake ...` WITHOUT `--override-input dotfiles-env
+  path:$HOME/.config/dotfiles/env` silently rebuilds with the committed
+  `env.example` placeholder values (verified: username becomes `your-username`).
+  Both tools accept `--override-input` (home-manager passes it through;
+  nixos-rebuild at the locked nixpkgs rev is nixos-rebuild-ng, which supports
+  it). Never print a bare switch command in docs.
 
 Portable dev tooling (shell, editor, language toolchains, git/CLI utilities,
 agent-CLI config) lives in `nix/modules/dev/` (imported as a unit via

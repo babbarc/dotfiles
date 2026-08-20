@@ -31,6 +31,12 @@ Run `~/.dotfiles/nix/setup-server.sh --dry-run` first to preview the exact
 commands without sudo or a build. See the host-specific sections under Bootstrap
 below for the manual equivalent of each step.
 
+For a fresh **WSL** machine (NixOS-WSL or any other distro), the sibling
+`nix/setup-wsl.sh` drives the whole bootstrap interactively - it fetches the
+repo itself (nix-only, no git needed), prompts for every per-machine env
+value, writes `~/.config/dotfiles/env`, and builds + activates the right host.
+See the WSL host section under Bootstrap.
+
 ## What you get
 
 Running the switch builds:
@@ -123,9 +129,15 @@ freshly-installed OS to a working switch; re-run the final command in each
 section any time to apply later changes.
 
 Host outputs are role-based (`laptop`, `server`, `wsl`), never username-based,
-so switch commands don't embed any personal identifier:
+so switch commands don't embed any personal identifier. Every switch command
+passes `--override-input dotfiles-env path:$HOME/.config/dotfiles/env` - that
+is how the flake reads your per-machine `~/.config/dotfiles/env` instead of
+the committed `env.example` (pure evaluation can't read the file directly;
+see "Per-machine values" above). Omitting it silently builds with the
+placeholder values from `env.example`.
 ```sh
-home-manager switch --flake ~/.dotfiles/nix#laptop
+home-manager switch --flake ~/.dotfiles/nix#laptop \
+  --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
 ```
 
 ### Arch laptop (`homeConfigurations.laptop`)
@@ -144,7 +156,8 @@ Standalone home-manager on Arch Linux, which isn't NixOS.
    ```
    That puts `home-manager` on `PATH`. From then on:
    ```sh
-   home-manager switch --flake ~/.dotfiles/nix#laptop
+   home-manager switch --flake ~/.dotfiles/nix#laptop \
+     --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
    ```
 
 ### Arch server (`homeConfigurations.server`)
@@ -162,20 +175,79 @@ display.
    ```
    From then on:
    ```sh
-   home-manager switch --flake ~/.dotfiles/nix#server
+   home-manager switch --flake ~/.dotfiles/nix#server \
+     --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
    ```
 
 ### WSL host (`nixosConfigurations.wsl`)
 
 A full NixOS-WSL system (NixOS itself as the WSL2 distro), with
-home-manager wired in as a NixOS module.
+home-manager wired in as a NixOS module. The installer also works on any
+other WSL distro (Ubuntu etc.): there it builds the same portable
+`homeConfigurations.server` dev profile instead of a full system.
 
-1. Install [NixOS-WSL](https://github.com/nix-community/NixOS-WSL) as the
-   WSL2 distro on the Windows machine - see that project's own install docs.
-2. Clone this repo to `~/.dotfiles` (same path as the Arch hosts).
-3. Activate:
+**Recommended - the guided installer** (`nix/setup-wsl.sh`). One interactive
+run takes a bare machine (nix only - no git needed) to fully configured: it
+detects the distro, asks where to fetch the repo from (your own Gitea server /
+the GitHub mirror / an existing checkout), walks through every `env.example`
+key (Enter accepts a shown default, or omits an optional machine-specific
+value with a warning), then fetches the repo to `~/.dotfiles`, writes
+`~/.config/dotfiles/env`, and builds + activates the right host for the
+distro.
+
+```sh
+# fetch the installer itself from the public GitHub mirror (or copy
+# nix/setup-wsl.sh out of any checkout)
+curl -fsSL -o setup-wsl.sh \
+  https://raw.githubusercontent.com/babbarc/dotfiles/master/nix/setup-wsl.sh
+bash setup-wsl.sh
+```
+
+`--dry-run` prints every command it would run without changing anything.
+Re-run `~/.dotfiles/nix/setup-wsl.sh` anytime to apply changes - it
+re-detects the environment and reuses the existing repo and env values.
+
+**Manual fallback** (the same commands the script runs internally, driven by
+hand - still nix-only):
+
+1. Install the distro: for the full system use
+   [NixOS-WSL](https://github.com/nix-community/NixOS-WSL) (see that
+   project's own install docs; nix is preinstalled). For the dev-only
+   profile, any distro with [nix](https://nixos.org/download) works.
+2. Enable flakes for the session - never edit `/etc/nix/nix.conf` on NixOS,
+   it is generated/read-only:
    ```sh
-   sudo nixos-rebuild switch --flake ~/.dotfiles/nix#wsl
+   export NIX_CONFIG="experimental-features = nix-command flakes"
+   ```
+3. Fetch the repo to `~/.dotfiles` (nix fetches it itself - the script
+   prompts for your Gitea repo URL, shaped like the example below):
+   ```sh
+   GITEA="http://gitea.example.com:3222/user/dotfiles"   # your home Gitea
+   STORE="$(nix-prefetch-url --unpack --print-path \
+     "$GITEA/archive/master.tar.gz" | tail -n 1)"
+   cp -a "$STORE" "$HOME/.dotfiles" && chmod -R u+w "$HOME/.dotfiles"
+   ```
+   (or `git clone https://github.com/babbarc/dotfiles.git ~/.dotfiles` for
+   the public GitHub mirror, or `cp`/symlink an existing checkout).
+4. Create the per-machine env file: `cp env.example ~/.config/dotfiles/env`
+   and edit it (see "Per-machine values" above).
+5. Build and activate. On NixOS-WSL (full system):
+   ```sh
+   nix build \
+     "$GITEA/archive/master.tar.gz?dir=nix#nixosConfigurations.wsl.config.system.build.toplevel" \
+     --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
+   sudo ./result/bin/switch-to-configuration switch
+   ```
+   On any non-NixOS distro, build `homeConfigurations.server.activationPackage`
+   from the same URL (`?dir=nix#homeConfigurations.server.activationPackage`)
+   with the same override, then `HOME_MANAGER_BACKUP_EXT=backup ./result/activate`.
+6. Update later:
+   ```sh
+   sudo nixos-rebuild switch --flake ~/.dotfiles/nix#wsl \
+     --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
+   # non-NixOS WSL instead:
+   #   home-manager switch --flake ~/.dotfiles/nix#server \
+   #     --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
    ```
 
 ### Keys and credentials

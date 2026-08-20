@@ -26,6 +26,12 @@ in
   wsl.enable = true;
   wsl.defaultUser = username;
 
+  # Keep flakes enabled on the system itself: the flake-built system generates
+  # /etc/nix/nix.conf from this config (it is read-only by hand), and without
+  # this the installed NixOS-WSL system loses flakes after the bootstrap
+  # session's NIX_CONFIG export goes away.
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
   # nixos-wsl's defaultUser account creation (isNormalUser/uid/extraGroups)
   # does not set a shell, so this is the only place the login shell is
   # decided - without it, opening a WSL2 terminal lands in bash even though
