@@ -39,9 +39,11 @@
   # fails during fish login startup, so ~/.nix-profile/bin never lands on PATH in
   # a clean ssh login. home-manager-path installs into the user's default nix
   # profile (~/.nix-profile), so add both profile dirs explicitly. conf.d runs
-  # for interactive AND non-interactive shells.
+  # for interactive AND non-interactive shells. ~/.local/bin is included too:
+  # herdr.nix and agent-cli-tools.nix curl-install their tools there, and
+  # nothing else on any of the three hosts ever added it to the shell PATH.
   xdg.configFile."fish/conf.d/nix-path.fish".text = ''
-    fish_add_path --prepend --global "$HOME/.nix-profile/bin" /nix/var/nix/profiles/default/bin
+    fish_add_path --prepend --global "$HOME/.nix-profile/bin" /nix/var/nix/profiles/default/bin "$HOME/.local/bin"
   '';
 
   xdg.configFile = {
