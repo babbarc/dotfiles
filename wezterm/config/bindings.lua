@@ -1,6 +1,5 @@
 local wezterm = require('wezterm')
 local platform = require('utils.platform')
-local env = require('config.env')
 local act = wezterm.action
 
 local mod = {}
@@ -59,8 +58,8 @@ local keys = {
    -- tabs --
    -- tabs: spawn+close
    { key = 't',          mods = mod.SUPER,     action = act.SpawnTab('DefaultDomain') },
-   -- (the SUPER_REV 't' binding that spawns a tab on the server's ssh domain
-   -- is appended below, only when the env file names a server)
+   -- (the SUPER_REV 't' binding that spawns a tab on the wsl:nixos domain is
+   -- appended below, only on Windows - see config/domains.lua)
    { key = 'w',          mods = mod.SUPER_REV, action = act.CloseCurrentTab({ confirm = false }) },
 
    -- tabs: navigation
@@ -188,15 +187,13 @@ local keys = {
    },
 }
 
--- Spawn a tab on the home server's ssh domain, matching the domain built in
--- config/domains.lua. Only added when the env file names a server (see
--- DOTFILES_SERVER_HOST / DOTFILES_SERVER_USER in env.example).
-local server_host = env.get('DOTFILES_SERVER_HOST')
-if server_host and server_host ~= '' then
+-- Spawn a tab on the wsl:nixos domain (see config/domains.lua), used only by
+-- wezterm on Windows.
+if platform.is_win then
    table.insert(keys, {
       key = 't',
       mods = mod.SUPER_REV,
-      action = act.SpawnTab({ DomainName = env.get('DOTFILES_SERVER_USER', 'server') }),
+      action = act.SpawnTab({ DomainName = 'wsl:nixos' }),
    })
 end
 

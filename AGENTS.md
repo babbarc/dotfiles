@@ -64,9 +64,10 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   migrates away any leftover `KevinSilvester/wezterm-config` clone from an
   older version of this script (its `.git`, `backdrops/`, `colors/`, and the
   two dropped `utils/*.lua` files), and writes
-  `%USERPROFILE%\.config\dotfiles\env` with exactly the 10 Windows-relevant
-  keys (the two `DOTFILES_SERVER_*` + eight `WEZTERM_*` keys;
-  `JOY_CONSOLE_*`/`STEREO_*` are never written there). See README's 'Windows
+  `%USERPROFILE%\.config\dotfiles\env` with exactly the 2 Windows-relevant
+  keys (`WEZTERM_WSL_SYSTEM_USER` + `WEZTERM_GIT_BASH_PATH`;
+  `DOTFILES_SERVER_*`/`JOY_CONSOLE_*`/`STEREO_*` are never written there,
+  since nothing on the Windows side reads them). See README's 'Windows
   wezterm' section under Bootstrap.
 - **Fresh-machine bootstrap** - `nix/setup.sh` is the single guided installer
   for all three hosts: detects the role (distro NixOS -> wsl, hostname `laptop`

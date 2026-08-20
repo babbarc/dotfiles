@@ -305,14 +305,12 @@ The script is idempotent and does three things:
    `%USERPROFILE%\.config\wezterm`, recreating the same directory structure.
 3. **Env file** - prompts for the Windows values and writes
    `%USERPROFILE%\.config\dotfiles\env` with exactly the Windows-relevant
-   keys: `DOTFILES_SERVER_HOST`, `DOTFILES_SERVER_USER`, `WEZTERM_SSH_WSL_USER`,
-   `WEZTERM_WSL_DISTRO`, `WEZTERM_WSL_FISH_USER`, `WEZTERM_WSL_FISH_CWD`,
-   `WEZTERM_WSL_BASH_USER`, `WEZTERM_WSL_BASH_CWD`, `WEZTERM_WSL_SYSTEM_USER`,
-   `WEZTERM_GIT_BASH_PATH`. Values from an existing env file become the
-   prompt defaults; keys outside that set are dropped on rewrite (the same
-   deterministic per-role writer `nix/setup.sh` uses), so re-runs keep your
-   values. The WSL users default to your Windows username, the WSL distro to
-   `NixOS`, and Git Bash to its standard install path.
+   keys: `WEZTERM_WSL_SYSTEM_USER` (the NixOS-WSL host user, for the single
+   `wsl:nixos` WSL domain) and `WEZTERM_GIT_BASH_PATH`. Values from an
+   existing env file become the prompt defaults; keys outside that set are
+   dropped on rewrite (the same deterministic per-role writer `nix/setup.sh`
+   uses), so re-runs keep your values. The WSL user defaults to your Windows
+   username, and Git Bash to its standard install path.
 
 Restart wezterm after it finishes. Re-run the script any time to update -
 it re-downloads every file above; pass `-WhatIf` for a dry-run that prints

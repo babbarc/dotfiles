@@ -27,8 +27,8 @@ surprises on any Windows codepage).
 .NOTES
 Mirrors what nix/setup.sh does per role, but for the Windows machine: this
 repo's public mirror is the source of the config, so no dotfiles checkout is
-needed on the Windows box. JOY_CONSOLE_*/STEREO_* keys are not needed on
-Windows and are never written.
+needed on the Windows box. DOTFILES_SERVER_*/JOY_CONSOLE_*/STEREO_* keys are
+not needed on Windows and are never written.
 #>
 
 [CmdletBinding(SupportsShouldProcess = $true)]
@@ -112,49 +112,17 @@ function Read-Value {
 }
 
 function Get-EnvValues {
-   # Prompts for the 10 Windows-relevant keys. Values from an existing env
+   # Prompts for the 2 Windows-relevant keys. Values from an existing env
    # file become the defaults, so a re-run keeps the machine's setup. The WSL
-   # users default to the Windows username; the cwd values derive from them.
+   # system user defaults to the Windows username.
    param([hashtable]$Defs, [string]$WinUser)
 
    $Values = @{}
-   Write-Info 'Enter keeps a [default]. Server values are optional: Enter with'
-   Write-Info "no default (or 'skip') omits them - each omission prints a warning."
+   Write-Info 'Enter keeps a [default].'
    Write-Info ''
-
-   $def = if ($Defs['DOTFILES_SERVER_HOST']) { $Defs['DOTFILES_SERVER_HOST'] } else { '' }
-   $Values['DOTFILES_SERVER_HOST'] = Read-Value 'Home server hostname or ssh alias (optional)' $def -AllowSkip
-   if (-not $Values['DOTFILES_SERVER_HOST']) {
-      Write-Warn 'DOTFILES_SERVER_HOST omitted - the wezterm ssh-to-server domain and its keybinding will not be added'
-   }
-
-   $def = if ($Defs['DOTFILES_SERVER_USER']) { $Defs['DOTFILES_SERVER_USER'] } else { '' }
-   $Values['DOTFILES_SERVER_USER'] = Read-Value 'Username to ssh into the server as (optional)' $def -AllowSkip
-   if (-not $Values['DOTFILES_SERVER_USER']) {
-      Write-Warn 'DOTFILES_SERVER_USER omitted - ssh-to-server integrations will not know which user to use'
-   }
-
-   Write-Info ''
-   $def = if ($Defs['WEZTERM_SSH_WSL_USER']) { $Defs['WEZTERM_SSH_WSL_USER'] } else { $WinUser }
-   $Values['WEZTERM_SSH_WSL_USER'] = Read-Value 'WSL user for the ssh:wsl domain (ssh from Windows into the distro)' $def -Required
-
-   $def = if ($Defs['WEZTERM_WSL_DISTRO']) { $Defs['WEZTERM_WSL_DISTRO'] } else { 'NixOS' }
-   $Values['WEZTERM_WSL_DISTRO'] = Read-Value 'WSL distro name' $def -Required
-
-   $def = if ($Defs['WEZTERM_WSL_FISH_USER']) { $Defs['WEZTERM_WSL_FISH_USER'] } else { $WinUser }
-   $Values['WEZTERM_WSL_FISH_USER'] = Read-Value 'WSL user for the wsl:ubuntu-fish domain (fish login)' $def -Required
-
-   $def = if ($Defs['WEZTERM_WSL_FISH_CWD']) { $Defs['WEZTERM_WSL_FISH_CWD'] } else { '/home/' + $Values['WEZTERM_WSL_FISH_USER'] }
-   $Values['WEZTERM_WSL_FISH_CWD'] = Read-Value 'WSL working directory for the fish domain' $def -Required
-
-   $def = if ($Defs['WEZTERM_WSL_BASH_USER']) { $Defs['WEZTERM_WSL_BASH_USER'] } else { $WinUser }
-   $Values['WEZTERM_WSL_BASH_USER'] = Read-Value 'WSL user for the wsl:ubuntu-bash domain (bash login)' $def -Required
-
-   $def = if ($Defs['WEZTERM_WSL_BASH_CWD']) { $Defs['WEZTERM_WSL_BASH_CWD'] } else { '/home/' + $Values['WEZTERM_WSL_BASH_USER'] }
-   $Values['WEZTERM_WSL_BASH_CWD'] = Read-Value 'WSL working directory for the bash domain' $def -Required
 
    $def = if ($Defs['WEZTERM_WSL_SYSTEM_USER']) { $Defs['WEZTERM_WSL_SYSTEM_USER'] } else { $WinUser }
-   $Values['WEZTERM_WSL_SYSTEM_USER'] = Read-Value 'WSL system user (the NixOS-WSL host user)' $def -Required
+   $Values['WEZTERM_WSL_SYSTEM_USER'] = Read-Value 'WSL system user (the NixOS-WSL host user, for the wsl:nixos domain)' $def -Required
 
    $def = if ($Defs['WEZTERM_GIT_BASH_PATH']) { $Defs['WEZTERM_GIT_BASH_PATH'] } else { 'C:\Program Files\Git\bin\bash.exe' }
    $Values['WEZTERM_GIT_BASH_PATH'] = Read-Value 'Full path to Git Bash bash.exe (launch menu entry)' $def -Required
@@ -179,18 +147,7 @@ function Write-EnvFile {
    $lines.Add('# values you type (they become the next run''s prompt defaults).')
 
    $lines.Add('')
-   $lines.Add('# server (wezterm ssh domain)')
-   if ($Values['DOTFILES_SERVER_HOST']) { $lines.Add('DOTFILES_SERVER_HOST=' + $Values['DOTFILES_SERVER_HOST']) }
-   if ($Values['DOTFILES_SERVER_USER']) { $lines.Add('DOTFILES_SERVER_USER=' + $Values['DOTFILES_SERVER_USER']) }
-
-   $lines.Add('')
    $lines.Add('# wezterm / WSL')
-   if ($Values['WEZTERM_SSH_WSL_USER']) { $lines.Add('WEZTERM_SSH_WSL_USER=' + $Values['WEZTERM_SSH_WSL_USER']) }
-   if ($Values['WEZTERM_WSL_DISTRO']) { $lines.Add('WEZTERM_WSL_DISTRO=' + $Values['WEZTERM_WSL_DISTRO']) }
-   if ($Values['WEZTERM_WSL_FISH_USER']) { $lines.Add('WEZTERM_WSL_FISH_USER=' + $Values['WEZTERM_WSL_FISH_USER']) }
-   if ($Values['WEZTERM_WSL_FISH_CWD']) { $lines.Add('WEZTERM_WSL_FISH_CWD=' + $Values['WEZTERM_WSL_FISH_CWD']) }
-   if ($Values['WEZTERM_WSL_BASH_USER']) { $lines.Add('WEZTERM_WSL_BASH_USER=' + $Values['WEZTERM_WSL_BASH_USER']) }
-   if ($Values['WEZTERM_WSL_BASH_CWD']) { $lines.Add('WEZTERM_WSL_BASH_CWD=' + $Values['WEZTERM_WSL_BASH_CWD']) }
    if ($Values['WEZTERM_WSL_SYSTEM_USER']) { $lines.Add('WEZTERM_WSL_SYSTEM_USER=' + $Values['WEZTERM_WSL_SYSTEM_USER']) }
 
    $lines.Add('')
@@ -249,14 +206,6 @@ $ConfigFiles = @(
 # this config no longer uses (see migration cleanup below).
 $StaleFrameworkPaths = @('.git', 'backdrops', 'colors', 'utils\backdrops.lua', 'utils\gpu-adapter.lua')
 $EnvKeys = @(
-   'DOTFILES_SERVER_HOST',
-   'DOTFILES_SERVER_USER',
-   'WEZTERM_SSH_WSL_USER',
-   'WEZTERM_WSL_DISTRO',
-   'WEZTERM_WSL_FISH_USER',
-   'WEZTERM_WSL_FISH_CWD',
-   'WEZTERM_WSL_BASH_USER',
-   'WEZTERM_WSL_BASH_CWD',
    'WEZTERM_WSL_SYSTEM_USER',
    'WEZTERM_GIT_BASH_PATH'
 )
@@ -339,7 +288,7 @@ if (-not $WinUser) { $WinUser = 'user' }
 
 if ($WhatIfPreference) {
    Write-Info '  (-WhatIf) interactive prompts are skipped in dry-run mode; a real run'
-   Write-Info ('  prompts for the 10 Windows keys and writes ' + $EnvFile)
+   Write-Info ('  prompts for the 2 Windows keys and writes ' + $EnvFile)
 } else {
    $Values = Get-EnvValues -Defs $Defs -WinUser $WinUser
    if ($PSCmdlet.ShouldProcess($EnvFile, 'write the per-machine env file')) {

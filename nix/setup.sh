@@ -368,7 +368,7 @@ DOTFILES_HOST_ROLE="$ROLE"
 
 if [ "$ROLE" = laptop ]; then
   DOTFILES_SERVER_HOST="$(ask_skip 'Home server hostname or ssh alias' "$(def DOTFILES_SERVER_HOST "")")"
-  [ -n "$DOTFILES_SERVER_HOST" ] || warn "skipped DOTFILES_SERVER_HOST - wezterm's ssh domain and the fish joy-console won't know your server"
+  [ -n "$DOTFILES_SERVER_HOST" ] || warn "skipped DOTFILES_SERVER_HOST - the fish joy-console won't know your server"
   DOTFILES_SERVER_USER="$(ask_skip 'Username to ssh into the server as (same as yours by default)' "$(def DOTFILES_SERVER_USER "$DOTFILES_USERNAME")")"
   [ -n "$DOTFILES_SERVER_USER" ] || warn "skipped DOTFILES_SERVER_USER - ssh-to-server integrations won't know which user to use"
 
