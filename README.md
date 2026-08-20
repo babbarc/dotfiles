@@ -9,33 +9,39 @@ from them, and fork them freely.
 
 ## Fresh machine setup
 
-For a fresh standalone Arch-style host (the `laptop` or `server` output), the
-`nix/setup-server.sh` script drives the whole bootstrap in one shot - it enables
-Nix flakes, pre-flights the repo for the pure-eval symlink trap, and builds and
-activates the host's home-manager generation.
+For any fresh host (the `laptop`, `server`, or `wsl` output), the single
+`nix/setup.sh` script drives the whole bootstrap in one guided interactive run.
+It detects the host role (distro NixOS -> wsl, hostname `laptop` -> laptop,
+otherwise it asks; `--role` / `SETUP_ROLE` override), asks where to fetch the
+repo from (your own Gitea server / the public GitHub mirror / an existing
+checkout), prompts for only that role's per-machine env values, writes
+`~/.config/dotfiles/env`, and builds + activates the right host:
+
+- **laptop / server** - `homeConfigurations.<role>.activationPackage`, then
+  `env HOME_MANAGER_BACKUP_EXT=backup ./result/activate`
+- **wsl on NixOS** - `nixosConfigurations.wsl` system toplevel, then
+  `sudo ./result/bin/switch-to-configuration switch`
+- **wsl on any other distro** - the portable `homeConfigurations.server` dev
+  profile, then `env HOME_MANAGER_BACKUP_EXT=backup ./result/activate`
 
 ```sh
-# 1. Install Nix (multi-user) and clone this repo to ~/.dotfiles
+# 1. Install Nix (multi-user). On NixOS-WSL it is preinstalled.
 sh <(curl -L https://nixos.org/nix/install) --daemon
-git clone <this-repo> ~/.dotfiles
 
-# 2. Bootstrap - auto-detects the host from `hostname` (or pass it explicitly:
-#    `... setup-server.sh server`). Needs sudo for the flakes toggle.
-~/.dotfiles/nix/setup-server.sh
+# 2. Fetch the installer from the public GitHub mirror (or copy
+#    nix/setup.sh out of any checkout), then run it.
+curl -fsSL -o setup.sh \
+  https://raw.githubusercontent.com/babbarc/dotfiles/master/nix/setup.sh
+bash setup.sh
 
 # 3. Authenticate gh - interactive OAuth, the one step that stays manual
 gh auth login
 ```
 
-Run `~/.dotfiles/nix/setup-server.sh --dry-run` first to preview the exact
-commands without sudo or a build. See the host-specific sections under Bootstrap
+`--dry-run` prints every command it would run without changing anything.
+Re-run `~/.dotfiles/nix/setup.sh` anytime - it re-detects the role and reuses
+the existing repo and env values. See the host-specific sections under Bootstrap
 below for the manual equivalent of each step.
-
-For a fresh **WSL** machine (NixOS-WSL or any other distro), the sibling
-`nix/setup-wsl.sh` drives the whole bootstrap interactively - it fetches the
-repo itself (nix-only, no git needed), prompts for every per-machine env
-value, writes `~/.config/dotfiles/env`, and builds + activates the right host.
-See the WSL host section under Bootstrap.
 
 ## What you get
 
@@ -102,6 +108,9 @@ cp env.example ~/.config/dotfiles/env
 # then edit ~/.config/dotfiles/env - every key is documented in env.example
 ```
 
+(or let `nix/setup.sh` generate it for you - it prompts for only the keys the
+detected role needs, with existing values as the defaults)
+
 The file is gitignored and never committed; the committed `env.example` at the
 repo root documents every key with a placeholder value. Keep secrets out of it
 - it is plaintext, and credentials stay in `pass`/the OS secret store per the
@@ -116,17 +125,26 @@ How each consumer reads it:
   nix build path:$HOME/.dotfiles?dir=nix#homeConfigurations.laptop.activationPackage \
     --override-input dotfiles-env path:$HOME/.config/dotfiles/env
   ```
-  `nix/setup-server.sh` wires the override in for you and errors with a
-  "copy env.example first" message when the file is missing.
+  `nix/setup.sh` writes the file for you: it asks only the keys of the
+  detected role's matrix (every role gets `DOTFILES_USERNAME` +
+  `DOTFILES_HOST_ROLE`, fixed to the role; laptop additionally gets
+  `DOTFILES_SERVER_HOST`, `DOTFILES_SERVER_USER`, the three `JOY_CONSOLE_*`
+  keys and `STEREO_TRANSCODE_ENDPOINT`) and drops any existing key outside
+  that matrix on rewrite - the file is deterministic per role, and the script
+  says so in its final summary. `WEZTERM_*` keys are never written here: they
+  are Windows-side only, and the Windows machine keeps its own env file.
 - **wezterm** - `wezterm/config/env.lua` parses the file at runtime.
 - **fish** - `fish/conf.d/dotfiles-env.fish` exports the values.
 - **zsh** - `.zshrc` sources the file.
 
 ## Bootstrap
 
-One flake (`nix/flake.nix`) drives three hosts. Steps below go from a bare
-freshly-installed OS to a working switch; re-run the final command in each
-section any time to apply later changes.
+One flake (`nix/flake.nix`) drives three hosts. Every host can be
+bootstrapped with the same guided installer (`nix/setup.sh` - see Fresh
+machine setup); the sections below are the manual equivalent for each host
+plus the exact switch commands. Steps below go from a bare freshly-installed
+OS to a working switch; re-run the final command in each section any time to
+apply later changes.
 
 Host outputs are role-based (`laptop`, `server`, `wsl`), never username-based,
 so switch commands don't embed any personal identifier. Every switch command
@@ -154,7 +172,9 @@ home-manager switch --flake path:$HOME/.dotfiles?dir=nix#laptop \
 
 ### Arch laptop (`homeConfigurations.laptop`)
 
-Standalone home-manager on Arch Linux, which isn't NixOS.
+Standalone home-manager on Arch Linux, which isn't NixOS. `nix/setup.sh`
+detects this role from `hostname` (or pass `--role laptop`). Manual
+equivalent:
 
 1. Install Nix ([nixos.org/download](https://nixos.org/download)) and make
    sure flakes are enabled (`experimental-features = nix-command flakes` in
@@ -176,7 +196,8 @@ Standalone home-manager on Arch Linux, which isn't NixOS.
 
 Same standalone home-manager shape as the laptop, but only the portable
 `nix/modules/dev` bucket - no desktop/GUI modules, since a server has no
-display.
+display. `nix/setup.sh` prompts for this role (or pass `--role server`).
+Manual equivalent:
 
 1. Install Nix and enable flakes, same as the laptop above.
 2. Clone this repo to `~/.dotfiles`.
@@ -198,26 +219,13 @@ home-manager wired in as a NixOS module. The installer also works on any
 other WSL distro (Ubuntu etc.): there it builds the same portable
 `homeConfigurations.server` dev profile instead of a full system.
 
-**Recommended - the guided installer** (`nix/setup-wsl.sh`). One interactive
-run takes a bare machine (nix only - no git needed) to fully configured: it
-detects the distro, asks where to fetch the repo from (your own Gitea server /
-the GitHub mirror / an existing checkout), walks through every `env.example`
-key (Enter accepts a shown default, or omits an optional machine-specific
-value with a warning), then fetches the repo to `~/.dotfiles`, writes
-`~/.config/dotfiles/env`, and builds + activates the right host for the
-distro.
-
-```sh
-# fetch the installer itself from the public GitHub mirror (or copy
-# nix/setup-wsl.sh out of any checkout)
-curl -fsSL -o setup-wsl.sh \
-  https://raw.githubusercontent.com/babbarc/dotfiles/master/nix/setup-wsl.sh
-bash setup-wsl.sh
-```
-
-`--dry-run` prints every command it would run without changing anything.
-Re-run `~/.dotfiles/nix/setup-wsl.sh` anytime to apply changes - it
-re-detects the environment and reuses the existing repo and env values.
+`nix/setup.sh` is the guided installer here too - on NixOS-WSL it builds the
+full system (`nixosConfigurations.wsl`, `sudo ./result/bin/switch-to-configuration
+switch`), on any other WSL distro the portable dev profile
+(`homeConfigurations.server`). See Fresh machine setup for the one-liner;
+`--dry-run` prints every command it would run without changing anything, and
+re-running `~/.dotfiles/nix/setup.sh` anytime reuses the existing repo and
+env values.
 
 **Manual fallback** (the same commands the script runs internally, driven by
 hand - still nix-only):
@@ -264,7 +272,7 @@ hand - still nix-only):
 
 ### Keys and credentials
 
-Neither host manages SSH keys, GPG keys, or anything else credential-shaped -
+No host manages SSH keys, GPG keys, or anything else credential-shaped -
 set those up per machine, outside this repo.
 
 ### After the switch

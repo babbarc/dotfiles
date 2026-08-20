@@ -36,20 +36,27 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   defaults to `env.example`, and each machine overrides it with
   `--override-input dotfiles-env path:$HOME/.config/dotfiles/env` (pure eval
   forbids reading the file directly; the override is not written to flake.lock).
-  `nix/setup-server.sh` wires the override in. wezterm parses the file at
-  runtime (`wezterm/config/env.lua`), fish loads it via
+  `nix/setup.sh` writes the file and wires the override in. wezterm parses the
+  file at runtime (`wezterm/config/env.lua`), fish loads it via
   `fish/conf.d/dotfiles-env.fish`, and `.zshrc` sources it for zsh.
-- **Fresh-machine bootstrap** - `nix/setup-server.sh` does the whole one-shot
-  bring-up for the laptop/server hosts (enable flakes via sudo, pre-flight the
-  repo for the pure-eval symlink trap, build + activate). `nix/setup-wsl.sh`
-  is the interactive WSL sibling: detects distro (NixOS-WSL ->
-  `nixosConfigurations.wsl` toplevel + switch-to-configuration, any other
-  distro -> `homeConfigurations.server` activation), fetches the repo itself
-  via `nix-prefetch-url --unpack` (nix-only, no git needed; LAN Gitea tarball
-  or GitHub mirror), prompts for every `env.example` key, writes
-  `~/.config/dotfiles/env`, then builds from the remote URL with
-  `--override-input dotfiles-env path:$HOME/.config/dotfiles/env`. See README's
-  'Bootstrap'; `--dry-run` previews without changing anything.
+- **Fresh-machine bootstrap** - `nix/setup.sh` is the single guided installer
+  for all three hosts: detects the role (distro NixOS -> wsl, hostname `laptop`
+  -> laptop, else prompts with default server; `--role`/`SETUP_ROLE` override),
+  asks where to fetch the repo from (LAN Gitea tarball / GitHub mirror /
+  existing checkout; nix-only via `nix-prefetch-url --unpack`, git only when
+  present and chosen), prompts ONLY the role's env keys (every role:
+  `DOTFILES_USERNAME` + `DOTFILES_HOST_ROLE` fixed to the role; laptop adds its
+  server/joy-console/stereo keys; `WEZTERM_*` are Windows-side only and never
+  prompted or written), writes `~/.config/dotfiles/env` with exactly those keys
+  (anything else in an existing file is dropped on rewrite, mentioned in the
+  summary), then builds with
+  `--override-input dotfiles-env path:$HOME/.config/dotfiles/env` and activates
+  per role (laptop/server -> `homeConfigurations.<role>.activationPackage` +
+  `HOME_MANAGER_BACKUP_EXT=backup ./result/activate`; wsl on NixOS ->
+  `nixosConfigurations.wsl.config.system.build.toplevel` + `sudo
+  ./result/bin/switch-to-configuration switch`; wsl elsewhere ->
+  `homeConfigurations.server`). See README's 'Bootstrap'; `--dry-run` previews
+  without changing anything.
 - **Every flake switch needs the env override** - `nixos-rebuild switch`/
   `home-manager switch --flake ...` WITHOUT `--override-input dotfiles-env
   path:$HOME/.config/dotfiles/env` silently rebuilds with the committed

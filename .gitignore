@@ -3,7 +3,8 @@ lazygit/state.yml
 # never commit it - it carries machine-specific personal values)
 env
 nix/env
-# nix build output symlink in the repo root (setup-server.sh's pre-flight already excludes it)
+# nix build output symlink in the repo root (running `nix build` from the
+# repo root creates it; nix/setup.sh builds from $HOME instead)
 result
 # Pi Calm runtime state must never be tracked (see tests/pi-calm.test.sh)
 /pi/agent/calm

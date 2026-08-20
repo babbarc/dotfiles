@@ -26,7 +26,7 @@ set -u
 
 TMP_ROOT=$(dotfiles_test_tmproot pi-calm)
 CALM_DIR="$ROOT/pi/extensions/calm"
-PI_NIX="$ROOT/nix/modules/pi.nix"
+PI_NIX="$ROOT/nix/modules/dev/pi.nix"
 PI_PACKAGE_DIR=${PI_CALM_TEST_PACKAGE_DIR:-"$(npm root -g 2>/dev/null)/@earendil-works/pi-coding-agent"}
 TMUX_SOCKET="pi-calm-test-$$"
 TMUX_SESSION="pi-calm-e2e"
@@ -115,9 +115,13 @@ test_zero_coupling_and_state_file() {
     assert_not_contains "$(cat "$file")" "$pat_dash" "$file mentions $pat_dash"
     assert_not_contains "$(cat "$file")" "$separator" "$file contains the operational separator"
   done
-  # The upstream project name may appear only in a license attribution.
+  # The upstream project name may appear only in a license attribution. The
+  # README is deliberately not scanned here: it documents the firstmate TOOL
+  # install (nix/modules/dev/firstmate.nix) and its Calm attribution is the
+  # "Adapted from ..." line, which is excluded below - the forbidden-
+  # identifiers scan above already covers the README for operational markers.
   local attribution_name="First""mate"
-  license_hits=$(grep -rni "$attribution_name" "$CALM_DIR" "$ROOT/README.md" "$PI_NIX" 2>/dev/null | grep -v "Adapted from" || true)
+  license_hits=$(grep -rni "$attribution_name" "$CALM_DIR" "$PI_NIX" 2>/dev/null | grep -v "Adapted from" || true)
   [ -z "$license_hits" ] || fail "unexpected upstream references outside license attribution: $license_hits"
   grep -q "MIT License" "$CALM_DIR/LICENSE" || fail "calm LICENSE lost the MIT permission text"
   grep -q "Copyright (c) 2026 Kun Chen" "$CALM_DIR/LICENSE" || fail "calm LICENSE lost the copyright notice"

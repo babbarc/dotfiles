@@ -1,18 +1,35 @@
 #!/usr/bin/env bash
-# nix/setup-wsl.sh - guided bootstrap for a fresh WSL machine.
+# nix/setup.sh - guided bootstrap for every host (laptop, server, wsl).
 #
-# Interactive installer that takes a bare WSL machine (nix only - no git, no
-# editors, no checkout) to a fully configured dotfiles setup:
+# Interactive installer that takes a bare machine (nix only - no git, no
+# editors, no checkout) to a fully configured dotfiles setup on any of the
+# flake's three hosts:
 #
-#   1. detects the environment (WSL, distro, nix, git)
+#   1. detects the role (laptop / server / wsl) from the environment, with a
+#      prompt fallback and a --role / SETUP_ROLE / positional override
 #   2. asks where to get the repo from (home LAN Gitea / public GitHub mirror /
-#      an existing local checkout) and walks through every per-machine env
-#      value with sensible WSL defaults (Enter accepts the [default])
-#   3. fetches the repo to ~/.dotfiles, writes ~/.config/dotfiles/env, then
-#      builds + activates the right host: the full NixOS-WSL system
-#      (nixosConfigurations.wsl, sudo ./result/bin/switch-to-configuration
-#      switch) on NixOS, or the portable dev-only home-manager profile
-#      (homeConfigurations.server, ./result/activate) on any other distro.
+#      an existing local checkout) and walks through only the per-machine env
+#      values that role needs (Enter accepts the [default]; Enter on an
+#      optional machine-specific key omits it with a warning)
+#   3. fetches the repo to ~/.dotfiles, writes ~/.config/dotfiles/env with
+#      exactly the role's keys, then builds + activates the right host:
+#      - laptop/server: homeConfigurations.<role>.activationPackage, then
+#        env HOME_MANAGER_BACKUP_EXT=backup ./result/activate
+#      - wsl on NixOS: nixosConfigurations.wsl.config.system.build.toplevel,
+#        then sudo ./result/bin/switch-to-configuration switch
+#      - wsl on any other distro: the portable dev-only home-manager profile
+#        (homeConfigurations.server) + env HOME_MANAGER_BACKUP_EXT=backup
+#        ./result/activate
+#
+# Role detection: distro NixOS (os-release ID=nixos) -> wsl; hostname "laptop"
+# -> laptop; otherwise prompted (laptop/server/wsl, default server). The role
+# decides which env keys are asked for and written: every role gets
+# DOTFILES_USERNAME + DOTFILES_HOST_ROLE (the latter fixed to the role);
+# laptop also gets its server / joy-console / stereo-transcode keys. WEZTERM_*
+# keys are Windows-side only and never prompted or written here - the Windows
+# machine maintains its own env file (see env.example). An existing env file's
+# keys outside the role's matrix are dropped on rewrite (the final summary
+# says so) - the file is deterministic per role.
 #
 # Only nix is required: nix fetches the repo itself (nix-prefetch-url --unpack
 # for archives, libgit2 for git). git is only used when present and chosen for
@@ -28,58 +45,85 @@
 #     --override-input dotfiles-env "path:$HOME/.config/dotfiles/env"
 #
 # Usage:
-#   setup-wsl.sh [--dry-run] [--help]
+#   setup.sh [--role <laptop|server|wsl>] [--dry-run] [--help]
 #
-#   --dry-run  run detection and prompts, then print every command that would
-#              run - nothing is fetched, written, built or activated.
+#   --role <role>  force the host role instead of detecting it
+#   --dry-run      run detection and prompts, then print every command that
+#                  would run - nothing is fetched, written, built or activated.
 #
 # Non-interactive / testing: pipe answers on stdin (empty line accepts the
-# default, EOF accepts defaults for the rest) and set SETUP_WSL_YES=1 to
+# default, EOF accepts defaults for the rest) and set SETUP_YES=1 to
 # auto-confirm, e.g.:
-#   printf '1\n\n\n\n...\n' | SETUP_WSL_YES=1 ./setup-wsl.sh
+#   printf '1\n\n\n\n...\n' | SETUP_YES=1 ./setup.sh
 set -euo pipefail
 
 usage() {
   cat >&2 <<'EOF'
-Usage: setup-wsl.sh [--dry-run] [--help]
+Usage: setup.sh [--role <laptop|server|wsl>] [--dry-run] [--help]
 
-Guided bootstrap of this dotfiles repo on a fresh WSL machine.
+Guided bootstrap of this dotfiles repo on any host (laptop, server, wsl).
 
-  --dry-run  run detection and prompts, then print every command that would
-             run - change nothing
-  --help     show this help
+  --role <role>  force the host role (default: detect from the environment,
+                 then prompt)
+  --dry-run      run detection and prompts, then print every command that
+                 would run - change nothing
+  --help         show this help
 
 Environment (all optional):
-  SETUP_WSL_YES=1      auto-confirm the final yes/no (testing/scripts)
-  SETUP_WSL_ENV_FILE   where to write the env file
-                       (default ~/.config/dotfiles/env)
-  SETUP_WSL_OS_ID      pretend /etc/os-release ID is this value, e.g. nixos
-                       (test hook - normally read from /etc/os-release)
+  SETUP_YES=1      auto-confirm the final yes/no (testing/scripts)
+  SETUP_ENV_FILE   where to write the env file
+                   (default ~/.config/dotfiles/env)
+  SETUP_OS_ID      pretend /etc/os-release ID is this value, e.g. nixos
+                   (test hook - normally read from /etc/os-release)
+  SETUP_ROLE       force the host role, same as --role
 EOF
   exit 1
 }
-
-DRY_RUN=0
-for arg in "$@"; do
-  case "$arg" in
-    --dry-run | --check) DRY_RUN=1 ;;
-    --help | -h) usage ;;
-    -*)
-      echo "error: unknown option: $arg" >&2
-      usage
-      ;;
-  esac
-done
-
-# Repo root is the parent of this script's directory (the script lives in nix/).
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# Per-machine env file location (override for testing).
-ENV_FILE="${SETUP_WSL_ENV_FILE:-$HOME/.config/dotfiles/env}"
 
 log()  { printf '\n== %s ==\n' "$*"; }
 info() { printf '%s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }
 die()  { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+DRY_RUN=0
+ROLE=""
+while [ "$#" -gt 0 ]; do
+  arg="$1"
+  case "$arg" in
+    --dry-run | --check) DRY_RUN=1 ;;
+    --role)
+      shift
+      [ "$#" -ge 1 ] || die "option --role needs a value (laptop|server|wsl)"
+      ROLE="$1"
+      ;;
+    --role=*) ROLE="${arg#--role=}" ;;
+    --help | -h) usage ;;
+    -*)
+      echo "error: unknown option: $arg" >&2
+      usage
+      ;;
+    *)
+      if [ -n "$ROLE" ]; then
+        echo "error: only one role may be given ('$ROLE' and '$arg')" >&2
+        usage
+      fi
+      ROLE="$arg"
+      ;;
+  esac
+  shift
+done
+[ -z "$ROLE" ] && [ -n "${SETUP_ROLE:-}" ] && ROLE="$SETUP_ROLE"
+if [ -n "$ROLE" ]; then
+  case "$ROLE" in
+    laptop | server | wsl) : ;;
+    *) die "invalid role '$ROLE' - valid roles: laptop, server, wsl" ;;
+  esac
+fi
+
+# Repo root is the parent of this script's directory (the script lives in nix/).
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Per-machine env file location (override for testing).
+ENV_FILE="${SETUP_ENV_FILE:-$HOME/.config/dotfiles/env}"
 
 # ask <prompt> <default>: prints the prompt (with "[default]: " when a
 # default exists) on stderr and echoes the answer on stdout. Empty input takes
@@ -117,8 +161,8 @@ ask_skip() {
 
 confirm() {
   local answer
-  if [ "${SETUP_WSL_YES:-0}" = 1 ]; then
-    printf 'proceeding (SETUP_WSL_YES=1)\n'
+  if [ "${SETUP_YES:-0}" = 1 ]; then
+    printf 'proceeding (SETUP_YES=1)\n'
     return 0
   fi
   printf '%s [y/N]: ' "$1" >&2
@@ -133,22 +177,8 @@ confirm() {
 
 log "Environment"
 
-IS_WSL=0
-if grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null || \
-   [ -n "${WSL_DISTRO_NAME:-}" ] || \
-   grep -qiE 'microsoft|wsl' /proc/sys/kernel/osrelease 2>/dev/null; then
-  IS_WSL=1
-fi
-
-if [ "$IS_WSL" -eq 1 ]; then
-  info "WSL detected (distro env: ${WSL_DISTRO_NAME:-unknown})"
-else
-  warn "not running under WSL - this script targets WSL but still works on any"
-  warn "Linux with nix; the distro detection below picks the build target."
-fi
-
-if [ -n "${SETUP_WSL_OS_ID:-}" ]; then
-  OS_ID="$SETUP_WSL_OS_ID"
+if [ -n "${SETUP_OS_ID:-}" ]; then
+  OS_ID="$SETUP_OS_ID"
 else
   OS_ID=""
   if [ -f /etc/os-release ]; then
@@ -158,14 +188,36 @@ fi
 IS_NIXOS=0
 if [ "$OS_ID" = nixos ]; then
   IS_NIXOS=1
-  info "distro: NixOS-WSL (full system build: nixosConfigurations.wsl)"
+  info "distro: NixOS (os-release ID=nixos)"
+fi
+
+# Role detection: distro NixOS -> wsl (the only NixOS host is NixOS-WSL);
+# hostname "laptop" -> laptop; otherwise ask, defaulting to server.
+if [ -z "$ROLE" ]; then
+  if [ "$IS_NIXOS" -eq 1 ]; then
+    ROLE=wsl
+    info "role: wsl (detected from NixOS)"
+  elif [ "$(hostname)" = laptop ]; then
+    ROLE=laptop
+    info "role: laptop (detected from hostname)"
+  else
+    info "distro: ${OS_ID:-unknown}, hostname: $(hostname) - no automatic role"
+    while :; do
+      ROLE="$(ask 'Host role for this machine (laptop/server/wsl)' server)"
+      case "$ROLE" in
+        laptop | server | wsl) break ;;
+        *) warn "'$ROLE' is not a valid role - enter laptop, server or wsl" ;;
+      esac
+    done
+    info "role: $ROLE"
+  fi
 else
-  info "distro: ${OS_ID:-unknown} (non-NixOS: portable home-manager profile, homeConfigurations.server)"
+  info "role: $ROLE (forced)"
 fi
 
 if ! command -v nix >/dev/null 2>&1; then
   if [ "$IS_NIXOS" -eq 1 ]; then
-    die "nix is not on PATH, but NixOS-WSL ships with it preinstalled - check your PATH (/nix/var/nix/profiles/default/bin/nix)"
+    die "nix is not on PATH, but NixOS ships with it preinstalled - check your PATH (/nix/var/nix/profiles/default/bin/nix)"
   fi
   cat >&2 <<'EOF'
 error: nix is not installed. Install it first, e.g.:
@@ -186,7 +238,7 @@ else
 fi
 
 if [ "$(id -u)" -eq 0 ]; then
-  warn "running as root - DOTFILES_USERNAME should be your regular WSL user, not root"
+  warn "running as root - DOTFILES_USERNAME should be your regular user, not root"
 fi
 
 # --- repo source ----------------------------------------------------------------
@@ -278,66 +330,60 @@ fi
 
 def() { printf '%s' "${DEF[$1]:-${2:-}}"; }
 
+# The keys this role asks for and writes - exactly. An existing env file's keys
+# outside this matrix are dropped on rewrite (mentioned in the final summary),
+# so the file stays deterministic per role. WEZTERM_* are never part of any
+# role's matrix: they are Windows-side and the Windows machine keeps its own
+# env file (see env.example).
+ROLE_KEYS="DOTFILES_USERNAME DOTFILES_HOST_ROLE"
+if [ "$ROLE" = laptop ]; then
+  ROLE_KEYS="$ROLE_KEYS DOTFILES_SERVER_HOST DOTFILES_SERVER_USER JOY_CONSOLE_CONTAINER_USER JOY_CONSOLE_CONTAINER JOY_CONSOLE_CONTAINER_HOME STEREO_TRANSCODE_ENDPOINT"
+fi
+
+DROPPED_KEYS=()
+for key in "${!DEF[@]}"; do
+  case " $ROLE_KEYS " in
+    *" $key "*) : ;;   # in the role's matrix - kept
+    *) DROPPED_KEYS+=("$key") ;;   # outside the matrix - dropped on rewrite
+  esac
+done
+
 info "Prompts with a [default] accept it with Enter. Optional machine-specific"
-info "values (server, joy-console, stereo, wezterm) are omitted by Enter or"
-info "'skip' - each omission prints a warning so nothing breaks silently."
+info "values are omitted by Enter or 'skip' - each omission prints a warning so"
+info "nothing breaks silently."
 
 CUR_USER="${USER:-$(id -un)}"
-DOTFILES_USERNAME="$(ask 'Username of your user on this WSL machine' "$(def DOTFILES_USERNAME "$CUR_USER")")"
+DOTFILES_USERNAME="$(ask 'Username of your user on this machine' "$(def DOTFILES_USERNAME "$CUR_USER")")"
 while [ -z "$DOTFILES_USERNAME" ]; do
   warn "the username must not be empty"
-  DOTFILES_USERNAME="$(ask 'Username of your user on this WSL machine' "$CUR_USER")"
+  DOTFILES_USERNAME="$(ask 'Username of your user on this machine' "$CUR_USER")"
 done
 case "$DOTFILES_USERNAME" in
   *' '*) die "username contains spaces: '$DOTFILES_USERNAME'" ;;
 esac
 
-DOTFILES_HOST_ROLE="$(ask 'Host role for this machine (laptop/server/wsl)' "$(def DOTFILES_HOST_ROLE wsl)")"
-case "$DOTFILES_HOST_ROLE" in
-  laptop | server | wsl) ;;
-  *) warn "unusual host role '$DOTFILES_HOST_ROLE' - the flake only defines laptop, server and wsl" ;;
-esac
+# Fixed to the detected/chosen role - never prompted, never taken from an
+# existing file (a different role in an existing file is simply overwritten).
+DOTFILES_HOST_ROLE="$ROLE"
 
-DOTFILES_SERVER_HOST="$(ask_skip 'Home server hostname or ssh alias' "$(def DOTFILES_SERVER_HOST "")")"
-if [ -z "$DOTFILES_SERVER_HOST" ]; then
-  warn "skipped DOTFILES_SERVER_HOST - wezterm's ssh domain and the fish joy-console won't know your server"
+if [ "$ROLE" = laptop ]; then
+  DOTFILES_SERVER_HOST="$(ask_skip 'Home server hostname or ssh alias' "$(def DOTFILES_SERVER_HOST "")")"
+  [ -n "$DOTFILES_SERVER_HOST" ] || warn "skipped DOTFILES_SERVER_HOST - wezterm's ssh domain and the fish joy-console won't know your server"
+  DOTFILES_SERVER_USER="$(ask_skip 'Username to ssh into the server as (same as yours by default)' "$(def DOTFILES_SERVER_USER "$DOTFILES_USERNAME")")"
+  [ -n "$DOTFILES_SERVER_USER" ] || warn "skipped DOTFILES_SERVER_USER - ssh-to-server integrations won't know which user to use"
+
+  log "joy-console (a container on the server - machine-specific, Enter or 'skip' omits)"
+  JOY_CONSOLE_CONTAINER_USER="$(ask_skip 'Container user (sudo -u target)' "$(def JOY_CONSOLE_CONTAINER_USER "")")"
+  JOY_CONSOLE_CONTAINER="$(ask_skip 'Container name (podman exec target)' "$(def JOY_CONSOLE_CONTAINER "")")"
+  JOY_CONSOLE_CONTAINER_HOME="$(ask_skip 'Container user home directory' "$(def JOY_CONSOLE_CONTAINER_HOME "")")"
+  [ -n "$JOY_CONSOLE_CONTAINER_USER" ] || warn "skipped JOY_CONSOLE_CONTAINER_USER - the joy-console function won't work"
+  [ -n "$JOY_CONSOLE_CONTAINER" ] || warn "skipped JOY_CONSOLE_CONTAINER - the joy-console function won't work"
+  [ -n "$JOY_CONSOLE_CONTAINER_HOME" ] || warn "skipped JOY_CONSOLE_CONTAINER_HOME"
+
+  log "stereo-transcode (a LAN service - machine-specific, Enter or 'skip' omits)"
+  STEREO_TRANSCODE_ENDPOINT="$(ask_skip 'HTTP endpoint' "$(def STEREO_TRANSCODE_ENDPOINT "")")"
+  [ -n "$STEREO_TRANSCODE_ENDPOINT" ] || warn "skipped STEREO_TRANSCODE_ENDPOINT - the stereo-transcode CLI won't work"
 fi
-DOTFILES_SERVER_USER="$(ask_skip 'Username to ssh into the server as (same as yours by default)' "$(def DOTFILES_SERVER_USER "$DOTFILES_USERNAME")")"
-if [ -z "$DOTFILES_SERVER_USER" ]; then
-  warn "skipped DOTFILES_SERVER_USER - ssh-to-server integrations won't know which user to use"
-fi
-
-log "joy-console (a container on the server - machine-specific, Enter or 'skip' omits)"
-JOY_CONSOLE_CONTAINER_USER="$(ask_skip 'Container user (sudo -u target)' "$(def JOY_CONSOLE_CONTAINER_USER "")")"
-JOY_CONSOLE_CONTAINER="$(ask_skip 'Container name (podman exec target)' "$(def JOY_CONSOLE_CONTAINER "")")"
-JOY_CONSOLE_CONTAINER_HOME="$(ask_skip 'Container user home directory' "$(def JOY_CONSOLE_CONTAINER_HOME "")")"
-[ -n "$JOY_CONSOLE_CONTAINER_USER" ] || warn "skipped JOY_CONSOLE_CONTAINER_USER - the joy-console function won't work"
-[ -n "$JOY_CONSOLE_CONTAINER" ] || warn "skipped JOY_CONSOLE_CONTAINER - the joy-console function won't work"
-[ -n "$JOY_CONSOLE_CONTAINER_HOME" ] || warn "skipped JOY_CONSOLE_CONTAINER_HOME"
-
-log "stereo-transcode (a LAN service - machine-specific, Enter or 'skip' omits)"
-STEREO_TRANSCODE_ENDPOINT="$(ask_skip 'HTTP endpoint' "$(def STEREO_TRANSCODE_ENDPOINT "")")"
-[ -n "$STEREO_TRANSCODE_ENDPOINT" ] || warn "skipped STEREO_TRANSCODE_ENDPOINT - the stereo-transcode CLI won't work"
-
-log "wezterm (Windows-side config, machine-specific - Enter or 'skip' omits any)"
-WEZTERM_SSH_WSL_USER="$(ask_skip 'ssh:wsl domain user (Windows -> this WSL distro)' "$(def WEZTERM_SSH_WSL_USER wsl-ssh-user)")"
-WEZTERM_WSL_DISTRO="$(ask_skip 'WSL distro name (old Ubuntu setup)' "$(def WEZTERM_WSL_DISTRO Ubuntu)")"
-WEZTERM_WSL_FISH_USER="$(ask_skip 'wsl:ubuntu-fish domain user' "$(def WEZTERM_WSL_FISH_USER wsl-fish-user)")"
-WEZTERM_WSL_FISH_CWD="$(ask_skip 'wsl:ubuntu-fish domain cwd' "$(def WEZTERM_WSL_FISH_CWD /home/wsl-fish-user)")"
-WEZTERM_WSL_BASH_USER="$(ask_skip 'wsl:ubuntu-bash domain user' "$(def WEZTERM_WSL_BASH_USER wsl-bash-user)")"
-WEZTERM_WSL_BASH_CWD="$(ask_skip 'wsl:ubuntu-bash domain cwd' "$(def WEZTERM_WSL_BASH_CWD /home/wsl-bash-user)")"
-WEZTERM_WSL_SYSTEM_USER="$(ask_skip 'NixOS-WSL system user (matches your username)' "$(def WEZTERM_WSL_SYSTEM_USER "$DOTFILES_USERNAME")")"
-WEZTERM_GIT_BASH_PATH="$(ask_skip 'Git Bash bash.exe path on Windows' "$(def WEZTERM_GIT_BASH_PATH 'C:\Users\your-user\scoop\apps\git\current\bin\bash.exe')")"
-# One warning per skipped key - these are Windows-side values, so omitting
-# them only affects wezterm's WSL/ssh domains on the Windows machine.
-[ -n "$WEZTERM_SSH_WSL_USER" ] || warn "skipped WEZTERM_SSH_WSL_USER - the ssh:wsl wezterm domain won't be configured"
-[ -n "$WEZTERM_WSL_DISTRO" ] || warn "skipped WEZTERM_WSL_DISTRO - the wsl:ubuntu-fish domain won't know the distro"
-[ -n "$WEZTERM_WSL_FISH_USER" ] || warn "skipped WEZTERM_WSL_FISH_USER - the wsl:ubuntu-fish domain won't be configured"
-[ -n "$WEZTERM_WSL_FISH_CWD" ] || warn "skipped WEZTERM_WSL_FISH_CWD"
-[ -n "$WEZTERM_WSL_BASH_USER" ] || warn "skipped WEZTERM_WSL_BASH_USER - the wsl:ubuntu-bash domain won't be configured"
-[ -n "$WEZTERM_WSL_BASH_CWD" ] || warn "skipped WEZTERM_WSL_BASH_CWD"
-[ -n "$WEZTERM_WSL_SYSTEM_USER" ] || warn "skipped WEZTERM_WSL_SYSTEM_USER - the NixOS-WSL wezterm domain won't be configured"
-[ -n "$WEZTERM_GIT_BASH_PATH" ] || warn "skipped WEZTERM_GIT_BASH_PATH - the wezterm Git Bash launch-menu entry won't be configured"
 
 # --- assemble the env file ----------------------------------------------------------
 
@@ -349,14 +395,17 @@ env_line() {
   fi
 }
 
-ENV_CONTENT="# Generated by nix/setup-wsl.sh on $(date '+%F %T') - re-run the script to regenerate.
-# Per-machine values for this dotfiles repo. See env.example in the repo for
-# documentation of every key. Plaintext and gitignored - keep secrets OUT of
-# this file; credentials stay in the OS secret store / pass.
+ENV_CONTENT="# Generated by nix/setup.sh on $(date '+%F %T') - re-run the script to regenerate.
+# Per-machine values for this dotfiles repo (host role: $ROLE). See env.example
+# in the repo for documentation of every key. Plaintext and gitignored - keep
+# secrets OUT of this file; credentials stay in the OS secret store / pass.
 
 # nix
 $(env_line DOTFILES_USERNAME "$DOTFILES_USERNAME")
 $(env_line DOTFILES_HOST_ROLE "$DOTFILES_HOST_ROLE")
+"
+if [ "$ROLE" = laptop ]; then
+  ENV_CONTENT+="# nix (laptop: server + joy-console + stereo-transcode keys)
 $(env_line DOTFILES_SERVER_HOST "$DOTFILES_SERVER_HOST")
 $(env_line DOTFILES_SERVER_USER "$DOTFILES_SERVER_USER")
 
@@ -367,30 +416,35 @@ $(env_line JOY_CONSOLE_CONTAINER_HOME "$JOY_CONSOLE_CONTAINER_HOME")
 
 # zsh stereo-transcode
 $(env_line STEREO_TRANSCODE_ENDPOINT "$STEREO_TRANSCODE_ENDPOINT")
-
-# wezterm (Windows / WSL)
-$(env_line WEZTERM_SSH_WSL_USER "$WEZTERM_SSH_WSL_USER")
-$(env_line WEZTERM_WSL_DISTRO "$WEZTERM_WSL_DISTRO")
-$(env_line WEZTERM_WSL_FISH_USER "$WEZTERM_WSL_FISH_USER")
-$(env_line WEZTERM_WSL_FISH_CWD "$WEZTERM_WSL_FISH_CWD")
-$(env_line WEZTERM_WSL_BASH_USER "$WEZTERM_WSL_BASH_USER")
-$(env_line WEZTERM_WSL_BASH_CWD "$WEZTERM_WSL_BASH_CWD")
-$(env_line WEZTERM_WSL_SYSTEM_USER "$WEZTERM_WSL_SYSTEM_USER")
-$(env_line WEZTERM_GIT_BASH_PATH "$WEZTERM_GIT_BASH_PATH")
 "
+fi
 
 # --- plan -----------------------------------------------------------------------------
 
-# Build target + activation depend on the detected distro.
-if [ "$IS_NIXOS" -eq 1 ]; then
-  ATTR="nixosConfigurations.wsl.config.system.build.toplevel"
-  ACTIVATE=(sudo ./result/bin/switch-to-configuration switch)
-  HOST_LABEL="NixOS-WSL system (nixosConfigurations.wsl)"
-else
-  ATTR="homeConfigurations.server.activationPackage"
-  ACTIVATE=(env HOME_MANAGER_BACKUP_EXT=backup ./result/activate)
-  HOST_LABEL="portable home-manager profile (homeConfigurations.server)"
-fi
+# Build target + activation depend on the role (and, for wsl, the distro).
+case "$ROLE" in
+  laptop)
+    ATTR="homeConfigurations.laptop.activationPackage"
+    ACTIVATE=(env HOME_MANAGER_BACKUP_EXT=backup ./result/activate)
+    HOST_LABEL="home-manager profile (homeConfigurations.laptop)"
+    ;;
+  server)
+    ATTR="homeConfigurations.server.activationPackage"
+    ACTIVATE=(env HOME_MANAGER_BACKUP_EXT=backup ./result/activate)
+    HOST_LABEL="home-manager profile (homeConfigurations.server)"
+    ;;
+  wsl)
+    if [ "$IS_NIXOS" -eq 1 ]; then
+      ATTR="nixosConfigurations.wsl.config.system.build.toplevel"
+      ACTIVATE=(sudo ./result/bin/switch-to-configuration switch)
+      HOST_LABEL="NixOS-WSL system (nixosConfigurations.wsl)"
+    else
+      ATTR="homeConfigurations.server.activationPackage"
+      ACTIVATE=(env HOME_MANAGER_BACKUP_EXT=backup ./result/activate)
+      HOST_LABEL="portable home-manager profile (homeConfigurations.server)"
+    fi
+    ;;
+esac
 
 UPDATE_REPO="$HOME/.dotfiles" # path used in the update-later commands
 case "$SOURCE" in
@@ -424,6 +478,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
   echo
   echo "# dry-run - nothing will be fetched, written, built or activated."
   echo "# plan:"
+  echo "#   role: $ROLE"
   echo "#   repo: $REPO_PLAN"
   echo "#   env:  write $ENV_FILE"
   echo "#   host: $HOST_LABEL"
@@ -454,10 +509,18 @@ fi
 
 echo
 echo "== Plan =="
+echo "  role: $ROLE"
 echo "  repo: $REPO_PLAN"
 echo "  env:  write $ENV_FILE"
 if [ "$ENV_EXISTED" -eq 1 ]; then
   echo "        (this file EXISTS - its values were the defaults above; it will be overwritten)"
+  OLD_ROLE="$(def DOTFILES_HOST_ROLE "")"
+  if [ -n "$OLD_ROLE" ] && [ "$OLD_ROLE" != "$ROLE" ]; then
+    echo "        (its DOTFILES_HOST_ROLE=$OLD_ROLE is replaced by the detected role $ROLE)"
+  fi
+  if [ "${#DROPPED_KEYS[@]}" -gt 0 ]; then
+    echo "        (${#DROPPED_KEYS[@]} key(s) outside the $ROLE matrix dropped: ${DROPPED_KEYS[*]})"
+  fi
 else
   echo "        (new file)"
 fi
@@ -586,20 +649,34 @@ info "running: ${ACTIVATE[*]}"
 log "Done"
 
 echo "What happened:"
+echo "  * role: $ROLE - built + activated $HOST_LABEL"
 echo "  * dotfiles repo at $UPDATE_REPO ($REPO_PLAN)"
 echo "  * per-machine env file at $ENV_FILE (values from your answers above)"
-echo "  * built + activated $HOST_LABEL"
 if [ "$ENV_EXISTED" -eq 1 ]; then
   echo "  * your previous env file's values were kept as defaults and rewritten"
 fi
+if [ "${#DROPPED_KEYS[@]}" -gt 0 ]; then
+  echo "  * dropped ${#DROPPED_KEYS[@]} key(s) from the old env file that are not part of the"
+  echo "    $ROLE env matrix (deterministic per-role file): ${DROPPED_KEYS[*]}"
+fi
 echo
 echo "Update this machine later:"
-if [ "$IS_NIXOS" -eq 1 ]; then
-  echo "  sudo nixos-rebuild switch --flake path:$UPDATE_REPO?dir=nix#wsl --override-input dotfiles-env path:$HOME/.config/dotfiles/env"
-else
-  echo "  home-manager switch --flake path:$UPDATE_REPO?dir=nix#server --override-input dotfiles-env path:$HOME/.config/dotfiles/env"
-fi
-echo "  (or just re-run $UPDATE_REPO/nix/setup-wsl.sh - it re-detects everything)"
+case "$ROLE" in
+  laptop)
+    echo "  home-manager switch --flake path:$UPDATE_REPO?dir=nix#laptop --override-input dotfiles-env path:$HOME/.config/dotfiles/env"
+    ;;
+  server)
+    echo "  home-manager switch --flake path:$UPDATE_REPO?dir=nix#server --override-input dotfiles-env path:$HOME/.config/dotfiles/env"
+    ;;
+  wsl)
+    if [ "$IS_NIXOS" -eq 1 ]; then
+      echo "  sudo nixos-rebuild switch --flake path:$UPDATE_REPO?dir=nix#wsl --override-input dotfiles-env path:$HOME/.config/dotfiles/env"
+    else
+      echo "  home-manager switch --flake path:$UPDATE_REPO?dir=nix#server --override-input dotfiles-env path:$HOME/.config/dotfiles/env"
+    fi
+    ;;
+esac
+echo "  (or just re-run $UPDATE_REPO/nix/setup.sh - it re-detects everything)"
 echo
 echo "SSH/GPG keys and other credentials are per-machine and NOT managed by this"
 echo "repo - set them up on this machine yourself (README: 'Keys and credentials')."
