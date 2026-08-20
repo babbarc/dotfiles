@@ -38,13 +38,18 @@
   #
   # The shell path in config.toml is templated per-host: the repo's copy
   # carries a `__FISH_SHELL_PATH__` placeholder for `default_shell`, which
-  # we substitute with this host's Nix-managed fish. The home-manager-path
-  # package installs into the user's default nix profile, so fish lives at
-  # ~/.nix-profile/bin/fish, not under
-  # ~/.local/state/nix/profiles/home-manager/bin.
+  # we substitute with this host's Nix-managed fish. We use the store path
+  # ${pkgs.fish}/bin/fish rather than a profile-relative path: the store
+  # path is absolute, hermetic, and identical on every host. The classic
+  # ~/.nix-profile/bin/fish only exists on non-NixOS home-manager installs
+  # (where packages land in the user's default nix profile); on NixOS
+  # home-manager installs into /etc/profiles/per-user/<user>/bin instead,
+  # so a profile-relative default_shell would break herdr panes on
+  # NixOS-WSL. Because the config is regenerated on every switch, a fish
+  # version bump in nixpkgs regenerates the path - no staleness.
   xdg.configFile."herdr/config.toml".text = builtins.replaceStrings
     [ "__FISH_SHELL_PATH__" ]
-    [ "${config.home.homeDirectory}/.nix-profile/bin/fish" ]
+    [ "${pkgs.fish}/bin/fish" ]
     (builtins.readFile ../../../herdr/config.toml);
 
   # One-time bootstrap: install herdr itself via its curl installer if it's
