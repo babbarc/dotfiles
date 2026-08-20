@@ -7,15 +7,15 @@
   # idempotently by the activation script below so it survives a fresh
   # `home-manager switch` without depending on anyone remembering a manual step.
   xdg.configFile = {
-    "nvim/init.lua".source = ../../nvim/init.lua;
-    "nvim/lazyvim.json".source = ../../nvim/lazyvim.json;
-    "nvim/stylua.toml".source = ../../nvim/stylua.toml;
+    "nvim/init.lua".source = ../../../nvim/init.lua;
+    "nvim/lazyvim.json".source = ../../../nvim/lazyvim.json;
+    "nvim/stylua.toml".source = ../../../nvim/stylua.toml;
     "nvim/lua" = {
-      source = ../../nvim/lua;
+      source = ../../../nvim/lua;
       recursive = true;
     };
     "nvim/snippets" = {
-      source = ../../nvim/snippets;
+      source = ../../../nvim/snippets;
       recursive = true;
     };
   };

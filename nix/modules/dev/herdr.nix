@@ -33,5 +33,5 @@
   # setting, edit ~/.dotfiles/herdr/config.toml directly and run
   # `home-manager switch` — don't rely on herdr's own settings UI or
   # `reset-keys` to persist changes.
-  xdg.configFile."herdr/config.toml".source = ../../herdr/config.toml;
+  xdg.configFile."herdr/config.toml".source = ../../../herdr/config.toml;
 }

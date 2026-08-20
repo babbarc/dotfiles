@@ -1,7 +1,7 @@
 { fisher, ... }:
 {
-  # programs.fish.enable is already set in home.nix (Task 1).
-  #
+  programs.fish.enable = true;
+
   # fisher itself: originally left pacman-managed since it isn't packaged in
   # nixpkgs. Revisited later — fisher's entire pacman package is just two
   # plain fish files (functions/fisher.fish, completions/fisher.fish), no
@@ -36,14 +36,14 @@
   xdg.configFile = {
     "fish/functions/fisher.fish".source = "${fisher}/functions/fisher.fish";
     "fish/completions/fisher.fish".source = "${fisher}/completions/fisher.fish";
-    "fish/conf.d/fish_frozen_theme.fish".source = ../../fish/conf.d/fish_frozen_theme.fish;
-    "fish/conf.d/fish_frozen_key_bindings.fish".source = ../../fish/conf.d/fish_frozen_key_bindings.fish;
-    "fish/functions/fish_greeting.fish".source = ../../fish/functions/fish_greeting.fish;
-    "fish/functions/joy-console.fish".source = ../../fish/functions/joy-console.fish;
-    "fish/functions/rgf.fish".source = ../../fish/functions/rgf.fish;
-    "fish/functions/s.fish".source = ../../fish/functions/s.fish;
+    "fish/conf.d/fish_frozen_theme.fish".source = ../../../fish/conf.d/fish_frozen_theme.fish;
+    "fish/conf.d/fish_frozen_key_bindings.fish".source = ../../../fish/conf.d/fish_frozen_key_bindings.fish;
+    "fish/functions/fish_greeting.fish".source = ../../../fish/functions/fish_greeting.fish;
+    "fish/functions/joy-console.fish".source = ../../../fish/functions/joy-console.fish;
+    "fish/functions/rgf.fish".source = ../../../fish/functions/rgf.fish;
+    "fish/functions/s.fish".source = ../../../fish/functions/s.fish;
     "fish/themes" = {
-      source = ../../fish/themes;
+      source = ../../../fish/themes;
       recursive = true;
     };
   };

@@ -18,11 +18,17 @@
     # plus a systemd user unit copied into $out/lib/systemd/user. Its own unit's
     # ExecStart is a NixOS system-profile path, so voice-dictation.nix defines its
     # own systemd.user.services entry against this package's real store path
-    # instead of linking theirs.
+    # instead of linking theirs. Arch-host-only input - voice-dictation.nix is a
+    # desktop-only module, never imported by the wsl host below.
     whisper-dictation.url = "github:jacopone/whisper-dictation";
+    # NixOS running as the WSL2 distro itself, for the wsl host below.
+    nixos-wsl = {
+      url = "github:nix-community/NixOS-WSL";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, fisher, whisper-dictation, ... }:
+  outputs = { self, nixpkgs, home-manager, fisher, whisper-dictation, nixos-wsl, ... }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -37,6 +43,21 @@
         inherit pkgs;
         extraSpecialArgs = { inherit system fisher whisper-dictation; };
         modules = [ ./home.nix ];
+      };
+
+      # NixOS-WSL host on the Windows machine. home-manager is wired in as a
+      # NixOS module (rather than standalone, as the Arch host above uses)
+      # because this output is itself a NixOS system - see hosts/wsl/configuration.nix's
+      # header comment for why that's the natural fit here, not a style pick made
+      # in a vacuum.
+      nixosConfigurations.wsl = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit fisher; };
+        modules = [
+          nixos-wsl.nixosModules.default
+          home-manager.nixosModules.home-manager
+          ./hosts/wsl/configuration.nix
+        ];
       };
     };
 }

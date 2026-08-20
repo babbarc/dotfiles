@@ -10,5 +10,5 @@
   # can keep writing to it on every run without hitting a read-only Nix-store
   # symlink. No activation hook is needed for it either — home-manager only
   # ever manages the config.yml path here, so it never touches state.yml.
-  xdg.configFile."lazygit/config.yml".source = ../../lazygit/config.yml;
+  xdg.configFile."lazygit/config.yml".source = ../../../lazygit/config.yml;
 }
