@@ -58,14 +58,19 @@ Nix.
   of this class of problem).
 - Non-nix-packaged tools (no nixpkgs entry, no binary cache) bootstrap themselves via a
   `home.activation.<name> = lib.hm.dag.entryAfter [ "writeBoundary" ] '' ... '';` block: guard
-  with `command -v <tool>` (or a directory-existence check) so an already-bootstrapped machine's
-  switch stays a fast no-op, and `||`-guard the install command itself so a failed curl/git/npm
-  only warns on stderr instead of failing the whole `home-manager switch`. `writeBoundary` is the
-  dag node where every `home.file`/`xdg.configFile` write lands, so any block that runs
-  `entryAfter [ "writeBoundary" ]` sees those files regardless of module import order - no
-  explicit cross-module activation ordering is needed. See `nix/modules/dev/pi.nix`
-  (settings.json merge), `nix/modules/dev/firstmate.nix`, `nix/modules/dev/herdr.nix`, and
-  `nix/modules/dev/agent-cli-tools.nix` for worked examples.
+  with `command -v <tool>` so an already-bootstrapped machine's switch stays a fast no-op, and
+  `||`-guard the install command so a failed curl/npm only warns on stderr instead of failing
+  the whole `home-manager switch`. Two gotchas make these blocks fragile (both fixed in
+  `nix/modules/dev/herdr.nix` and `nix/modules/dev/agent-cli-tools.nix`): (1) every activation
+  script REPLACES PATH with only pinned store utils (bash/coreutils/grep/sed/jq - no /usr/bin,
+  no ~/.local/bin, no curl/tar/awk), so a block must re-prefix PATH with `$HOME/.local/bin`
+  (so `command -v` sees already-installed tools and the block no-ops) plus the store-pinned
+  tool dirs any piped installer needs by bare name (curl, and gawk/gnutar as needed); (2)
+  `home.file`/`xdg.configFile` content is linked at `linkGeneration`, which runs AFTER
+  `writeBoundary`, so an install block cannot rely on a home.file (e.g. ~/.npmrc) existing -
+  pass any needed config (like npm's `--prefix "$HOME/.local"`) explicitly on the command line.
+  See `nix/modules/dev/pi.nix` (settings.json merge), `nix/modules/dev/firstmate.nix`,
+  `nix/modules/dev/herdr.nix`, and `nix/modules/dev/agent-cli-tools.nix` for worked examples.
 
 ## Maintaining this file
 
