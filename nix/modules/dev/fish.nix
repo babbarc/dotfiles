@@ -30,6 +30,7 @@
   # included) while still injecting the user's own two lines into it.
   programs.fish.interactiveShellInit = ''
     starship init fish | source
+    fzf --fish | source
     set -g fish_greeting
   '';
 
@@ -49,7 +50,6 @@
     "fish/conf.d/dotfiles-env.fish".source = ../../../fish/conf.d/dotfiles-env.fish;
     "fish/conf.d/fish_frozen_theme.fish".source = ../../../fish/conf.d/fish_frozen_theme.fish;
     "fish/conf.d/fish_frozen_key_bindings.fish".source = ../../../fish/conf.d/fish_frozen_key_bindings.fish;
-    "fish/conf.d/fish_history_bindings.fish".source = ../../../fish/conf.d/fish_history_bindings.fish;
     "fish/functions/fish_greeting.fish".source = ../../../fish/functions/fish_greeting.fish;
     "fish/functions/joy-console.fish".source = ../../../fish/functions/joy-console.fish;
     "fish/functions/rgf.fish".source = ../../../fish/functions/rgf.fish;
