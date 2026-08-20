@@ -105,15 +105,6 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   `~/.dotfiles?dir=nix#...`). A RELATIVE git ref like `./nix#...` from inside
   the repo is fine (git-flake semantics use the whole git tree). Tarball/git-URL
   flakes already source the whole repo and use `?dir=nix` in the URL.
-- **Claude Code and Codex CLIs are real nixpkgs derivations** (`claude-code`,
-  `codex` - unlike the tools in `agent-cli-tools.nix`, which aren't packaged
-  there), installed via `home.packages` in `nix/modules/dev/pi.nix` alongside
-  `pi-coding-agent`. `claude-code` is unfree (Anthropic's own license terms),
-  so both `nix/flake.nix` and `nix/hosts/wsl/configuration.nix` list it in
-  their `allowUnfreePredicate` (matching the existing `unrar` exception -
-  keep that list to explicitly-audited packages only). `codex` is free and
-  needs no exception. Re-check nixpkgs before assuming either package name
-  still applies; both ship fast-moving CLIs that nixpkgs tracks closely.
 
 Portable dev tooling (shell, editor, language toolchains, git/CLI utilities,
 agent-CLI config) lives in `nix/modules/dev/` (imported as a unit via
