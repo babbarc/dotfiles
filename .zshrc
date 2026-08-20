@@ -119,6 +119,14 @@ source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $HOME/.dotfiles/fzf-git.sh/fzf-git.sh
 
+# Per-machine values (usernames, hostnames, LAN endpoints) from the gitignored
+# ~/.config/dotfiles/env - see env.example at the repo root. KEY=VALUE lines
+# source natively; load before the autoloaded helpers below so e.g.
+# stereo-transcode-cli sees STEREO_TRANSCODE_ENDPOINT when it runs.
+if [ -f "$HOME/.config/dotfiles/env" ]; then
+    source "$HOME/.config/dotfiles/env"
+fi
+
 fpath=( ~/.zshfn "${fpath[@]}" )
 autoload -Uz $fpath[1]/*(.:t)
 

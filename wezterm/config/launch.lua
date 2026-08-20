@@ -1,4 +1,5 @@
 local platform = require('utils.platform')
+local env = require('config.env')
 
 ---@type Config
 local options = {
@@ -16,7 +17,7 @@ if platform.is_win then
       { label = 'Msys2', args = { 'ucrt64.cmd' } },
       {
          label = 'Git Bash',
-         args = { 'C:\\Users\\USERNAME\\scoop\\apps\\git\\current\\bin\\bash.exe' },
+         args = { env.get('WEZTERM_GIT_BASH_PATH', 'C:\\Program Files\\Git\\bin\\bash.exe') },
       },
    }
 elseif platform.is_mac then

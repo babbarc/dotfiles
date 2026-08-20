@@ -11,9 +11,11 @@
 # server or Arch-specific assumptions - is imported here. Secrets and machine
 # identity (SSH/GPG keys) are not managed by this repo on any host; set those
 # up on the WSL machine itself, same as the Arch host.
-{ config, lib, pkgs, fisher, ... }:
+{ config, lib, pkgs, fisher, dotfilesEnv, ... }:
 let
-  username = "USERNAME";
+  # Per-machine username from ~/.config/dotfiles/env (see env.example); the
+  # committed example/placeholder keeps eval working on a fresh clone.
+  username = dotfilesEnv.DOTFILES_USERNAME or "user";
 in
 {
   imports = [
@@ -47,7 +49,7 @@ in
 
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
-  home-manager.extraSpecialArgs = { inherit fisher; };
+  home-manager.extraSpecialArgs = { inherit fisher dotfilesEnv; };
   home-manager.users.${username} = {
     home.username = username;
     home.homeDirectory = "/home/${username}";

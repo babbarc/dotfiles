@@ -1,5 +1,17 @@
 {
   "nodes": {
+    "dotfiles-env": {
+      "flake": false,
+      "locked": {
+        "path": "../env.example",
+        "type": "path"
+      },
+      "original": {
+        "path": "../env.example",
+        "type": "path"
+      },
+      "parent": []
+    },
     "fisher": {
       "flake": false,
       "locked": {
@@ -125,6 +137,7 @@
     },
     "root": {
       "inputs": {
+        "dotfiles-env": "dotfiles-env",
         "fisher": "fisher",
         "home-manager": "home-manager",
         "nixos-wsl": "nixos-wsl",

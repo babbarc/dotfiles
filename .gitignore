@@ -1,4 +1,8 @@
 lazygit/state.yml
+# Per-machine env file (copy env.example to ~/.config/dotfiles/env per machine;
+# never commit it - it carries machine-specific personal values)
+env
+nix/env
 # nix build output symlink in the repo root (setup-server.sh's pre-flight already excludes it)
 result
 # Pi Calm runtime state must never be tracked (see tests/pi-calm.test.sh)

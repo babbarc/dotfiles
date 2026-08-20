@@ -48,7 +48,7 @@ Running the switch builds:
 ```
 nix/                  Nix home-manager flake and per-tool modules
 pi/                   Pi agent files: AGENTS.md, theme, extensions (incl. Calm)
-wezterm/              The 5 config files that diverge from the wezterm-config
+wezterm/              The 6 config files that diverge from the wezterm-config
                       framework clone at ~/.config/wezterm
 herdr/                herdr config.toml (read-only in the store; edit here)
 nvim/                 lazyvim setup
@@ -56,7 +56,7 @@ fish/                 shell config
 lazygit/              lazygit config.yml
 tmux.conf.local       tmux configuration
 tests/                Behavior tests, incl. the Pi Calm suite
-docs/                 Design specs and implementation plans
+env.example           Template for the per-machine env file (see below)
 ```
 
 ## Agent instructions
@@ -85,20 +85,47 @@ behavior is pinned by `tests/pi-calm.test.sh`.
   files under `wezterm/config/` are nix-managed. Don't commit in that clone.
 - **lazygit state** - `state.yml` is runtime state and stays gitignored.
 
+## Per-machine values (`~/.config/dotfiles/env`)
+
+Machine-specific personal values (usernames, hostnames, LAN endpoints) are not
+hardcoded in this repo - each machine supplies them in a plain `KEY=value`
+file, `~/.config/dotfiles/env`:
+
+```sh
+cp env.example ~/.config/dotfiles/env
+# then edit ~/.config/dotfiles/env - every key is documented in env.example
+```
+
+The file is gitignored and never committed; the committed `env.example` at the
+repo root documents every key with a placeholder value. Keep secrets out of it
+- it is plaintext, and credentials stay in `pass`/the OS secret store per the
+"Keys and credentials" posture below.
+
+How each consumer reads it:
+
+- **Nix builds** - the flake input `dotfiles-env` defaults to the committed
+  `env.example` and is overridden per machine, so pure evaluation never reads
+  the file directly:
+  ```sh
+  nix build ~/.dotfiles/nix#homeConfigurations.laptop.activationPackage \
+    --override-input dotfiles-env path:$HOME/.config/dotfiles/env
+  ```
+  `nix/setup-server.sh` wires the override in for you and errors with a
+  "copy env.example first" message when the file is missing.
+- **wezterm** - `wezterm/config/env.lua` parses the file at runtime.
+- **fish** - `fish/conf.d/dotfiles-env.fish` exports the values.
+- **zsh** - `.zshrc` sources the file.
+
 ## Bootstrap
 
 One flake (`nix/flake.nix`) drives three hosts. Steps below go from a bare
 freshly-installed OS to a working switch; re-run the final command in each
 section any time to apply later changes.
 
-**Breaking change for the existing laptop:** the Arch host's flake output was
-renamed from `homeConfigurations.USERNAME` to `homeConfigurations.laptop` (and
-its config moved to `nix/hosts/laptop/home.nix`), to make room for a second
-Arch host below and keep naming role-based across all three hosts. If you
-already have this repo checked out on the laptop, your switch command changes:
+Host outputs are role-based (`laptop`, `server`, `wsl`), never username-based,
+so switch commands don't embed any personal identifier:
 ```sh
-home-manager switch --flake ~/.dotfiles/nix#USERNAME   # old
-home-manager switch --flake ~/.dotfiles/nix#laptop    # new
+home-manager switch --flake ~/.dotfiles/nix#laptop
 ```
 
 ### Arch laptop (`homeConfigurations.laptop`)

@@ -15,11 +15,17 @@
 #   setup-server.sh [--impure] [--dry-run] [host]
 #
 #   host       homeConfigurations name (laptop or server). If omitted,
-#              auto-detected from `hostname`.
+#              auto-detected from DOTFILES_HOST_ROLE in the per-machine env
+#              file (~/.config/dotfiles/env), with a hostname fallback.
 #   --impure   proceed even if the repo has stray symlinks that break pure eval
 #              (passes --impure to nix build).
 #   --dry-run  run only the pre-flight checks and print the commands that would
 #              run - no sudo, no build, no activation.
+#
+# Requires the per-machine env file ~/.config/dotfiles/env (copy the committed
+# env.example and edit it); it is passed to the flake via
+# --override-input dotfiles-env path:$HOME/.config/dotfiles/env so pure
+# evaluation stays intact.
 set -euo pipefail
 
 usage() {
@@ -28,7 +34,8 @@ Usage: setup-server.sh [--impure] [--dry-run] [host]
 
 Bootstraps a fresh standalone home-manager host (laptop or server).
 
-  host       homeConfigurations name (defaults to auto-detection from hostname)
+  host       homeConfigurations name (defaults to auto-detection from
+             DOTFILES_HOST_ROLE in the per-machine env file, then hostname)
   --impure   proceed even if the repo has stray symlinks that break pure eval
   --dry-run  run only the pre-flight checks and print commands, run nothing
 EOF
@@ -61,7 +68,17 @@ done
 # Repo root is the parent of this script's directory (the script lives in nix/).
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# --- resolve the host ---------------------------------------------------------
+# --- per-machine env file ---------------------------------------------------
+
+# Machine-specific personal values (usernames, hostnames, LAN endpoints) live
+# in ~/.config/dotfiles/env on each machine, copied from the committed
+# env.example at the repo root. The nix build below feeds it to the flake via
+# --override-input dotfiles-env path:$ENV_FILE so pure evaluation stays intact
+# (nix can't read the file directly in pure mode). DOTFILES_ENV_FILE overrides
+# the location for testing.
+ENV_FILE="${DOTFILES_ENV_FILE:-$HOME/.config/dotfiles/env}"
+
+# --- resolve the host -------------------------------------------------------
 
 VALID_HOSTS=(laptop server)
 is_valid_host() {
@@ -72,16 +89,33 @@ is_valid_host() {
   return 1
 }
 
+# The build needs the env file (the --override-input below); fail fast with
+# clear guidance instead of letting nix error cryptically.
+if [ ! -f "$ENV_FILE" ]; then
+  echo "error: per-machine env file not found: $ENV_FILE" >&2
+  echo "       Copy the committed example and edit it for this host first:" >&2
+  echo "         cp \"$REPO/env.example\" \"$ENV_FILE\"" >&2
+  echo "       At minimum set DOTFILES_HOST_ROLE (one of ${VALID_HOSTS[*]}) and" >&2
+  echo "       DOTFILES_USERNAME; see the comments in env.example for the rest." >&2
+  exit 1
+fi
+
 if [ -z "$HOST" ]; then
-  case "$(hostname)" in
-    laptop) HOST=laptop ;;
-    HOSTNAME) HOST=server ;;
-    *)
-      echo "error: could not auto-detect host from \`hostname\` ($(hostname))." >&2
-      printf 'valid host names: %s\n' "${VALID_HOSTS[*]}" >&2
-      exit 1
-      ;;
-  esac
+  # DOTFILES_HOST_ROLE from the per-machine env file (later lines win) ...
+  HOST="$(sed -n 's/^DOTFILES_HOST_ROLE=//p' "$ENV_FILE" | tail -n 1 | xargs)"
+  # ... then a hostname-based fallback for the first bootstrap, while the env
+  # file's role line is still unset.
+  if [ -z "$HOST" ]; then
+    case "$(hostname)" in
+      laptop) HOST=laptop ;;
+    esac
+  fi
+  if [ -z "$HOST" ]; then
+    echo "error: could not auto-detect host role from \`hostname\` ($(hostname))." >&2
+    printf 'pass it explicitly (e.g. setup-server.sh server) or set DOTFILES_HOST_ROLE in %s.\n' "$ENV_FILE" >&2
+    printf 'valid host names: %s\n' "${VALID_HOSTS[*]}" >&2
+    exit 1
+  fi
   echo "auto-detected host: $HOST"
 fi
 
@@ -215,7 +249,7 @@ fi
 # --- dry-run: print what would run, then stop --------------------------------
 
 BUILD_REF="$REPO/nix#homeConfigurations.$HOST.activationPackage"
-BUILD_ARGS=()
+BUILD_ARGS=(--override-input dotfiles-env "path:$ENV_FILE")
 [ "$IMPURE" -eq 1 ] && BUILD_ARGS+=(--impure)
 
 if [ "$DRY_RUN" -eq 1 ]; then

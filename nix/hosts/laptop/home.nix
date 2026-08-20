@@ -1,6 +1,8 @@
-{ config, pkgs, ... }:
+{ config, pkgs, dotfilesEnv, ... }:
 let
-  username = "USERNAME";
+  # Per-machine username from ~/.config/dotfiles/env (see env.example); the
+  # committed example/placeholder keeps eval working on a fresh clone.
+  username = dotfilesEnv.DOTFILES_USERNAME or "user";
 in
 {
   home.username = username;

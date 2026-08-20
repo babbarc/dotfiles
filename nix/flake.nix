@@ -1,5 +1,5 @@
 {
-  description = "USERNAME's home-manager configuration";
+  description = "Personal home-manager configuration";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -26,9 +26,21 @@
       url = "github:nix-community/NixOS-WSL";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Machine-specific personal values (usernames, hostnames, LAN endpoints)
+    # live in ~/.config/dotfiles/env on each machine, never in this repo. Pure
+    # eval forbids reading that file directly (builtins.readFile of an absolute
+    # path errors, builtins.getEnv returns ""), so it is fed in as a flake
+    # input instead: the committed env.example is the default, and each machine
+    # overrides it at build time with
+    #   --override-input dotfiles-env path:$HOME/.config/dotfiles/env
+    # (verified working in pure mode; the override is not written to flake.lock).
+    dotfiles-env = {
+      url = "path:../env.example";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, fisher, whisper-dictation, nixos-wsl, ... }:
+  outputs = { self, nixpkgs, home-manager, fisher, whisper-dictation, nixos-wsl, dotfiles-env, ... }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -37,11 +49,21 @@
         # explicitly-audited packages only, don't widen it casually.
         config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [ "unrar" ];
       };
+
+      # Parse the env file (KEY=VALUE lines, '#' comments and blanks ignored)
+      # into an attrset so host configs can read e.g. dotfilesEnv.DOTFILES_USERNAME.
+      dotfilesEnv = let
+        lines = builtins.filter (l: l != "" && builtins.substring 0 1 l != "#")
+          (builtins.filter builtins.isString
+            (builtins.split "\n" (builtins.replaceStrings [ "\r" ] [ "" ] (builtins.readFile dotfiles-env))));
+        parse = acc: line: let m = builtins.match "([^=]+)=(.*)" line; in
+          if m == null then acc else acc // { ${builtins.head m} = builtins.elemAt m 1; };
+      in builtins.foldl' parse {} lines;
     in
     {
       homeConfigurations.laptop = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        extraSpecialArgs = { inherit system fisher whisper-dictation; };
+        extraSpecialArgs = { inherit system fisher whisper-dictation dotfilesEnv; };
         modules = [ ./hosts/laptop/home.nix ];
       };
 
@@ -51,7 +73,7 @@
       # has no display, so none of the laptop's desktop/GUI modules apply.
       homeConfigurations.server = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        extraSpecialArgs = { inherit fisher; };
+        extraSpecialArgs = { inherit fisher dotfilesEnv; };
         modules = [ ./hosts/server/home.nix ];
       };
 
@@ -62,7 +84,7 @@
       # in a vacuum.
       nixosConfigurations.wsl = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit fisher; };
+        specialArgs = { inherit fisher dotfilesEnv; };
         modules = [
           nixos-wsl.nixosModules.default
           home-manager.nixosModules.home-manager

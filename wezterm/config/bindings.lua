@@ -1,6 +1,7 @@
 local wezterm = require('wezterm')
 local platform = require('utils.platform')
 local backdrops = require('utils.backdrops')
+local env = require('config.env')
 local act = wezterm.action
 
 local mod = {}
@@ -59,7 +60,8 @@ local keys = {
    -- tabs --
    -- tabs: spawn+close
    { key = 't',          mods = mod.SUPER,     action = act.SpawnTab('DefaultDomain') },
-   { key = 't',          mods = mod.SUPER_REV, action = act.SpawnTab({ DomainName = 'USERNAME' }) },
+   -- (the SUPER_REV 't' binding that spawns a tab on the server's ssh domain
+   -- is appended below, only when the env file names a server)
    { key = 'w',          mods = mod.SUPER_REV, action = act.CloseCurrentTab({ confirm = false }) },
 
    -- tabs: navigation
@@ -233,6 +235,18 @@ local keys = {
       }),
    },
 }
+
+-- Spawn a tab on the home server's ssh domain, matching the domain built in
+-- config/domains.lua. Only added when the env file names a server (see
+-- DOTFILES_SERVER_HOST / DOTFILES_SERVER_USER in env.example).
+local server_host = env.get('DOTFILES_SERVER_HOST')
+if server_host and server_host ~= '' then
+   table.insert(keys, {
+      key = 't',
+      mods = mod.SUPER_REV,
+      action = act.SpawnTab({ DomainName = env.get('DOTFILES_SERVER_USER', 'server') }),
+   })
+end
 
 -- stylua: ignore
 ---@type table<string, Key[]>

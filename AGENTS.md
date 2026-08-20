@@ -29,6 +29,16 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   derivation evaluates and builds. Validate with:
   `nix build ./nix#nixosConfigurations.wsl.config.system.build.toplevel --no-link`.
 - `nix flake check ./nix` checks all three outputs together.
+- **Per-machine values** - machine-specific personal values (usernames,
+  hostnames, LAN endpoints) are NOT in the repo. Each machine supplies them in
+  `~/.config/dotfiles/env` (gitignored; the committed template is `env.example`
+  at the repo root). Nix reads it via the `dotfiles-env` flake input: the input
+  defaults to `env.example`, and each machine overrides it with
+  `--override-input dotfiles-env path:$HOME/.config/dotfiles/env` (pure eval
+  forbids reading the file directly; the override is not written to flake.lock).
+  `nix/setup-server.sh` wires the override in. wezterm parses the file at
+  runtime (`wezterm/config/env.lua`), fish loads it via
+  `fish/conf.d/dotfiles-env.fish`, and `.zshrc` sources it for zsh.
 - **Fresh-machine bootstrap** - `nix/setup-server.sh` does the whole one-shot
   bring-up for the laptop/server hosts (enable flakes via sudo, pre-flight the
   repo for the pure-eval symlink trap, build + activate). See README's
@@ -65,7 +75,8 @@ Nix.
   substitutes with `$HOME/.nix-profile/bin/fish` (home-manager-path installs into the
   user's default nix profile) via `builtins.replaceStrings` + `.text`. Keep the
   placeholder - replacing it with a literal path would hardcode one host's user and
-  break the others (server user is `USERNAME`).
+  break the others (each host's username comes from its per-machine
+  `~/.config/dotfiles/env` file, not from this repo - see `env.example`).
 - Non-nix-packaged tools (no nixpkgs entry, no binary cache) bootstrap themselves via a
   `home.activation.<name> = lib.hm.dag.entryAfter [ "writeBoundary" ] '' ... '';` block: guard
   with `command -v <tool>` so an already-bootstrapped machine's switch stays a fast no-op, and
