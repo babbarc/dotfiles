@@ -44,10 +44,11 @@ in
   users.users.${username}.shell = pkgs.fish;
 
   # Matches nix/flake.nix's allowUnfreePredicate for the Arch host's own pkgs
-  # instance (unrar, pulled in by modules/dev/cli-tools.nix) - this host has
-  # no custom `pkgs` passed to nixosSystem, so the same exception has to be
-  # set here instead, via the module system.
-  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "unrar" ];
+  # instance (unrar, pulled in by modules/dev/cli-tools.nix; claude-code,
+  # pulled in by modules/dev/pi.nix) - this host has no custom `pkgs` passed
+  # to nixosSystem, so the same exception has to be set here instead, via the
+  # module system.
+  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "unrar" "claude-code" ];
 
   # Matches nix/home.nix's home.stateVersion - do not bump either without
   # reading home-manager's stateVersion documentation first.

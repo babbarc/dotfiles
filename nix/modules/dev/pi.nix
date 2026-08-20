@@ -13,6 +13,13 @@ in
 {
   home.packages = with pkgs; [
     pi-coding-agent
+    # claude-code and codex are both real nixpkgs derivations (unlike the
+    # tools in agent-cli-tools.nix, which aren't packaged there) - Nix-native
+    # beats an activation-script workaround when it's genuinely available.
+    # claude-code is nixpkgs' unfreeRedistributable-style unfree package (see
+    # flake.nix's allowUnfreePredicate); codex is free.
+    claude-code
+    codex
   ];
 
   # settings.json mixes genuinely-user fields (theme, hideThinkingBlock,
@@ -68,8 +75,10 @@ in
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/pi/themes";
 
   # Single source of truth for agent instructions, consumed by every agent
-  # runtime on this machine: pi reads ~/.pi/agent/AGENTS.md for its global
-  # context, claude reads ~/.claude/CLAUDE.md, codex reads ~/.codex/AGENTS.md.
+  # runtime on this machine (pi via home.packages above, claude-code and
+  # codex via home.packages above): pi reads ~/.pi/agent/AGENTS.md for its
+  # global context, claude reads ~/.claude/CLAUDE.md, codex reads
+  # ~/.codex/AGENTS.md.
   # Same out-of-store symlink pattern as the extensions/themes above, so an
   # edit here is picked up on the next session (pi: /reload, claude/codex:
   # restart) without a home-manager switch. Adapted from kunchenguid/dotfiles
