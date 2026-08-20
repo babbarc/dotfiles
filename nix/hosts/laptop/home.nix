@@ -1,7 +1,10 @@
 { config, pkgs, ... }:
+let
+  username = "USERNAME";
+in
 {
-  home.username = "USERNAME";
-  home.homeDirectory = "/home/USERNAME";
+  home.username = username;
+  home.homeDirectory = "/home/${username}";
 
   # Pin to the home-manager release this config was first created against.
   # Do not bump this when nixpkgs/home-manager update later — see home-manager's
@@ -11,12 +14,12 @@
   programs.home-manager.enable = true;
 
   imports = [
-    ./modules/dev
-    ./modules/session-path.nix
-    ./modules/wezterm.nix
-    ./modules/sway.nix
-    ./modules/waybar.nix
-    ./modules/voice-dictation.nix
-    ./modules/fonts.nix
+    ../../modules/dev
+    ../../modules/session-path.nix
+    ../../modules/wezterm.nix
+    ../../modules/sway.nix
+    ../../modules/waybar.nix
+    ../../modules/voice-dictation.nix
+    ../../modules/fonts.nix
   ];
 }

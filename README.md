@@ -63,11 +63,21 @@ behavior is pinned by `tests/pi-calm.test.sh`.
 
 ## Bootstrap
 
-One flake (`nix/flake.nix`) drives two hosts. Steps below go from a bare
+One flake (`nix/flake.nix`) drives three hosts. Steps below go from a bare
 freshly-installed OS to a working switch; re-run the final command in each
 section any time to apply later changes.
 
-### Arch host (`homeConfigurations.USERNAME`)
+**Breaking change for the existing laptop:** the Arch host's flake output was
+renamed from `homeConfigurations.USERNAME` to `homeConfigurations.laptop` (and
+its config moved to `nix/hosts/laptop/home.nix`), to make room for a second
+Arch host below and keep naming role-based across all three hosts. If you
+already have this repo checked out on the laptop, your switch command changes:
+```sh
+home-manager switch --flake ~/.dotfiles/nix#USERNAME   # old
+home-manager switch --flake ~/.dotfiles/nix#laptop    # new
+```
+
+### Arch laptop (`homeConfigurations.laptop`)
 
 Standalone home-manager on Arch Linux, which isn't NixOS.
 
@@ -78,12 +88,30 @@ Standalone home-manager on Arch Linux, which isn't NixOS.
 3. `home-manager` isn't installed yet, so build and activate the flake output
    directly:
    ```sh
-   nix build ~/.dotfiles/nix#homeConfigurations.USERNAME.activationPackage
+   nix build ~/.dotfiles/nix#homeConfigurations.laptop.activationPackage
    ./result/activate
    ```
    That puts `home-manager` on `PATH`. From then on:
    ```sh
-   home-manager switch --flake ~/.dotfiles/nix#USERNAME
+   home-manager switch --flake ~/.dotfiles/nix#laptop
+   ```
+
+### Arch server (`homeConfigurations.server`)
+
+Same standalone home-manager shape as the laptop, but only the portable
+`nix/modules/dev` bucket - no desktop/GUI modules, since a server has no
+display.
+
+1. Install Nix and enable flakes, same as the laptop above.
+2. Clone this repo to `~/.dotfiles`.
+3. Build and activate:
+   ```sh
+   nix build ~/.dotfiles/nix#homeConfigurations.server.activationPackage
+   ./result/activate
+   ```
+   From then on:
+   ```sh
+   home-manager switch --flake ~/.dotfiles/nix#server
    ```
 
 ### WSL host (`nixosConfigurations.wsl`)
@@ -93,7 +121,7 @@ home-manager wired in as a NixOS module.
 
 1. Install [NixOS-WSL](https://github.com/nix-community/NixOS-WSL) as the
    WSL2 distro on the Windows machine - see that project's own install docs.
-2. Clone this repo to `~/.dotfiles` (same path as the Arch host).
+2. Clone this repo to `~/.dotfiles` (same path as the Arch hosts).
 3. Activate:
    ```sh
    sudo nixos-rebuild switch --flake ~/.dotfiles/nix#wsl

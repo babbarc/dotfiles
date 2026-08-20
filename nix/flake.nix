@@ -39,10 +39,20 @@
       };
     in
     {
-      homeConfigurations."USERNAME" = home-manager.lib.homeManagerConfiguration {
+      homeConfigurations.laptop = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         extraSpecialArgs = { inherit system fisher whisper-dictation; };
-        modules = [ ./home.nix ];
+        modules = [ ./hosts/laptop/home.nix ];
+      };
+
+      # Arch server host - same standalone home-manager shape as the laptop
+      # (Arch isn't NixOS, so no NixOS module system to hang home-manager off
+      # of), but only imports the portable nix/modules/dev bucket: a server
+      # has no display, so none of the laptop's desktop/GUI modules apply.
+      homeConfigurations.server = home-manager.lib.homeManagerConfiguration {
+        inherit pkgs;
+        extraSpecialArgs = { inherit fisher; };
+        modules = [ ./hosts/server/home.nix ];
       };
 
       # NixOS-WSL host on the Windows machine. home-manager is wired in as a

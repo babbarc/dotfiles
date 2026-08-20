@@ -6,14 +6,21 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 
 ## Nix / home-manager (`nix/`)
 
-This flake drives two hosts from one repo:
+This flake drives three hosts from one repo, all under `nix/hosts/<name>/`,
+output names role-based (`laptop`, `server`, `wsl`) not username-based:
 
-- **Arch host** (`homeConfigurations.USERNAME`, `nix/home.nix`) - standalone
-  home-manager, since Arch isn't NixOS and has no NixOS module system to hang
-  home-manager off of. This is the machine this repo's checkout is not
-  running on live - the deployed copy is a separate checkout at `~/.dotfiles`,
-  updated out of band via `home-manager switch` there. Validate with:
-  `nix build ./nix#homeConfigurations.USERNAME.activationPackage --no-link` (from repo root).
+- **Arch laptop** (`homeConfigurations.laptop`, `nix/hosts/laptop/home.nix`) -
+  standalone home-manager, since Arch isn't NixOS and has no NixOS module
+  system to hang home-manager off of. This is the machine this repo's
+  checkout is not running on live - the deployed copy is a separate checkout
+  at `~/.dotfiles`, updated out of band via `home-manager switch` there.
+  Validate with:
+  `nix build ./nix#homeConfigurations.laptop.activationPackage --no-link` (from repo root).
+- **Arch server** (`homeConfigurations.server`, `nix/hosts/server/home.nix`) -
+  same standalone shape as the laptop, but imports only the shared
+  `nix/modules/dev` bucket - no desktop/GUI modules, since a server has no
+  display. Validate with:
+  `nix build ./nix#homeConfigurations.server.activationPackage --no-link`.
 - **WSL host** (`nixosConfigurations.wsl`, `nix/hosts/wsl/configuration.nix`) -
   a NixOS-WSL system with home-manager wired in as a NixOS module (not
   standalone), since this output *is* a NixOS system - see that file's header
@@ -21,17 +28,18 @@ This flake drives two hosts from one repo:
   installed NixOS-WSL on the Windows machine yet; this output only proves the
   derivation evaluates and builds. Validate with:
   `nix build ./nix#nixosConfigurations.wsl.config.system.build.toplevel --no-link`.
-- `nix flake check ./nix` checks both outputs together.
+- `nix flake check ./nix` checks all three outputs together.
 
 Portable dev tooling (shell, editor, language toolchains, git/CLI utilities,
 agent-CLI config) lives in `nix/modules/dev/` (imported as a unit via
-`nix/modules/dev/default.nix`) and is shared by both hosts - it must stay free
-of anything assuming a display server or Arch-specific integration. Desktop/GUI
-modules (`sway.nix`, `waybar.nix`, `wezterm.nix`, `fonts.nix`,
+`nix/modules/dev/default.nix`) and is shared by all three hosts - it must stay
+free of anything assuming a display server or Arch-specific integration.
+Desktop/GUI modules (`sway.nix`, `waybar.nix`, `wezterm.nix`, `fonts.nix`,
 `voice-dictation.nix`, `session-path.nix`) stay directly under `nix/modules/`,
-Arch-only, imported only by `nix/home.nix`. **SSH/GPG keys and anything
-credential-shaped are out of scope for this repo on both hosts** - they are
-never centralized in `modules/dev/`; set them up per-machine outside Nix.
+Arch-only, imported only by `nix/hosts/laptop/home.nix`. **SSH/GPG keys and
+anything credential-shaped are out of scope for this repo on all hosts** -
+they are never centralized in `modules/dev/`; set them up per-machine outside
+Nix.
 
 - Flakes only see git-tracked files. A new file under `nix/modules/`, `nix/hosts/`
   (or any path the flake reads) must be `git add`-ed (at least `git add -N` for an
@@ -42,7 +50,7 @@ never centralized in `modules/dev/`; set them up per-machine outside Nix.
   maps each file via `xdg.configFile."<app>/<relative-path>".source = ../../../<app>/<relative-path>;`
   (three `../` from `nix/modules/dev/*.nix`, two from `nix/modules/*.nix`), then
   adding that module to the relevant `imports` list (`nix/modules/dev/default.nix`
-  for shared modules, `nix/home.nix` for Arch-only ones). See `nix/modules/wezterm.nix`,
+  for shared modules, `nix/hosts/laptop/home.nix` for Arch-only ones). See `nix/modules/wezterm.nix`,
   `nix/modules/sway.nix`, `nix/modules/waybar.nix` for examples. Before wiring up a new
   app this way, check whether its config files reference each other or other config by
   absolute `~/.config/...` path - that breaks once home-manager replaces them with
