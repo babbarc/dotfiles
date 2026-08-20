@@ -124,6 +124,50 @@ elif [ "$features_set" -eq 0 ]; then
   fi
 fi
 
+# --- robust fish Nix PATH hook -----------------------------------------------
+
+# Nix's installer-created /etc/fish/conf.d/nix.fish sources nix-daemon.fish, whose
+# per-user-profile `add_path "$NIX_LINK/bin"` silently fails during fish login
+# startup - so ~/.nix-profile/bin (where home-manager-path installs every tool)
+# never lands on PATH in a clean ssh login. A robust hook adds both profile dirs
+# directly, independent of that buggy script; $HOME expands per-user at runtime.
+# The home-manager-managed fish/conf.d/nix-path.fish (nix/modules/dev/fish.nix)
+# already covers the home-manager user; this system hook covers every user on the
+# machine. The stock hook contains `nix-daemon.fish`; the robust one does not.
+
+FISH_NIX_HOOK=/etc/fish/conf.d/nix.fish
+FISH_HOOK_CONTENT='# Nix
+fish_add_path --prepend --global "$HOME/.nix-profile/bin" /nix/var/nix/profiles/default/bin
+# End Nix
+'
+fish_hook_ok=0
+if [ -f "$FISH_NIX_HOOK" ] && grep -q 'nix-daemon.fish' "$FISH_NIX_HOOK"; then
+  : # stock nix-installer hook - needs replacing
+elif [ -f "$FISH_NIX_HOOK" ] && grep -Fq 'fish_add_path --prepend --global "$HOME/.nix-profile/bin"' "$FISH_NIX_HOOK"; then
+  fish_hook_ok=1
+fi
+
+# A missing/unfixable system hook does NOT block the bootstrap: home-manager's
+# managed fish/conf.d/nix-path.fish already covers the main user. So warn, don't fail.
+if [ "$DRY_RUN" -eq 1 ]; then
+  if [ "$fish_hook_ok" -eq 1 ]; then
+    echo "# ok: $FISH_NIX_HOOK already has the robust fish Nix PATH hook"
+  else
+    echo "# would write $FISH_NIX_HOOK:"
+    printf '%s' "$FISH_HOOK_CONTENT" | sed 's/^/#   /'
+  fi
+elif [ "$fish_hook_ok" -eq 0 ]; then
+  if ! command -v sudo >/dev/null 2>&1; then
+    echo "warning: $FISH_NIX_HOOK is missing the robust Nix PATH hook and sudo is" >&2
+    echo "         unavailable to write it; home-manager's managed fish/conf.d" >&2
+    echo "         still covers the main user, so continuing." >&2
+  else
+    sudo mkdir -p /etc/fish/conf.d
+    printf '%s' "$FISH_HOOK_CONTENT" | sudo tee "$FISH_NIX_HOOK" >/dev/null
+    echo "wrote the robust fish Nix PATH hook to $FISH_NIX_HOOK"
+  fi
+fi
+
 # --- pre-flight: pure-eval symlink trap --------------------------------------
 
 # A legacy symlink-based dotfiles deployment can leave files in the repo
