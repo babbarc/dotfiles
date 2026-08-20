@@ -278,10 +278,6 @@ if ($Defs.Count -gt 0) {
 
 # Keys outside the Windows set are dropped on rewrite, so the file stays
 # deterministic (the nix/setup.sh per-role writer does the same).
-$Dropped = @()
-foreach ($key in $Defs.Keys) {
-   if ($EnvKeys -notcontains $key) { $Dropped += $key }
-}
 
 $WinUser = $env:USERNAME
 if (-not $WinUser) { $WinUser = 'user' }
@@ -295,9 +291,6 @@ if ($WhatIfPreference) {
       New-Item -ItemType Directory -Force -Path $EnvDir | Out-Null
       Write-EnvFile -Values $Values -Path $EnvFile
       Write-Info ('  wrote ' + $EnvFile)
-      if ($Dropped.Count -gt 0) {
-         Write-Warn ('dropped keys outside the Windows set (removed from the file): ' + ($Dropped -join ', '))
-      }
    }
 }
 

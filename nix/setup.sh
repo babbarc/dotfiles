@@ -330,23 +330,11 @@ fi
 
 def() { printf '%s' "${DEF[$1]:-${2:-}}"; }
 
-# The keys this role asks for and writes - exactly. An existing env file's keys
-# outside this matrix are dropped on rewrite (mentioned in the final summary),
-# so the file stays deterministic per role. WEZTERM_* are never part of any
-# role's matrix: they are Windows-side and the Windows machine keeps its own
-# env file (see env.example).
-ROLE_KEYS="DOTFILES_USERNAME DOTFILES_HOST_ROLE"
-if [ "$ROLE" = laptop ]; then
-  ROLE_KEYS="$ROLE_KEYS DOTFILES_SERVER_HOST DOTFILES_SERVER_USER JOY_CONSOLE_CONTAINER_USER JOY_CONSOLE_CONTAINER JOY_CONSOLE_CONTAINER_HOME STEREO_TRANSCODE_ENDPOINT"
-fi
-
-DROPPED_KEYS=()
-for key in "${!DEF[@]}"; do
-  case " $ROLE_KEYS " in
-    *" $key "*) : ;;   # in the role's matrix - kept
-    *) DROPPED_KEYS+=("$key") ;;   # outside the matrix - dropped on rewrite
-  esac
-done
+# This role asks for and writes exactly these keys. An existing env file's
+# keys outside this matrix are dropped on rewrite, so the file stays
+# deterministic per role. WEZTERM_* are never part of any role's matrix:
+# they are Windows-side and the Windows machine keeps its own env file
+# (see env.example).
 
 info "Prompts with a [default] accept it with Enter. Optional machine-specific"
 info "values are omitted by Enter or 'skip' - each omission prints a warning so"
@@ -518,9 +506,6 @@ if [ "$ENV_EXISTED" -eq 1 ]; then
   if [ -n "$OLD_ROLE" ] && [ "$OLD_ROLE" != "$ROLE" ]; then
     echo "        (its DOTFILES_HOST_ROLE=$OLD_ROLE is replaced by the detected role $ROLE)"
   fi
-  if [ "${#DROPPED_KEYS[@]}" -gt 0 ]; then
-    echo "        (${#DROPPED_KEYS[@]} key(s) outside the $ROLE matrix dropped: ${DROPPED_KEYS[*]})"
-  fi
 else
   echo "        (new file)"
 fi
@@ -654,10 +639,6 @@ echo "  * dotfiles repo at $UPDATE_REPO ($REPO_PLAN)"
 echo "  * per-machine env file at $ENV_FILE (values from your answers above)"
 if [ "$ENV_EXISTED" -eq 1 ]; then
   echo "  * your previous env file's values were kept as defaults and rewritten"
-fi
-if [ "${#DROPPED_KEYS[@]}" -gt 0 ]; then
-  echo "  * dropped ${#DROPPED_KEYS[@]} key(s) from the old env file that are not part of the"
-  echo "    $ROLE env matrix (deterministic per-role file): ${DROPPED_KEYS[*]}"
 fi
 echo
 echo "Update this machine later:"
