@@ -1,5 +1,10 @@
-{ ... }:
+{ pkgs, ... }:
 {
+  # lazygit is now Nix-provided via pkgs.lazygit, superseding the pacman
+  # copy that a fresh machine used to rely on (a removed pacman lazygit
+  # silently lost the binary). Only its config is managed below.
+  home.packages = [ pkgs.lazygit ];
+
   # ~/.config/lazygit used to be a whole-directory symlink to
   # ~/.dotfiles/lazygit, which held both config.yml (user config) and
   # state.yml (lazygit's own runtime state — recent repos, command history;

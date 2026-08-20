@@ -60,6 +60,12 @@ Nix.
   absolute `~/.config/...` path - that breaks once home-manager replaces them with
   read-only Nix-store symlinks (wezterm.nix's header comment documents a real instance
   of this class of problem).
+- `herdr/config.toml` is templated, not `.source`-linked: it carries a
+  `__FISH_SHELL_PATH__` placeholder for `default_shell` that `nix/modules/dev/herdr.nix`
+  substitutes with `$HOME/.nix-profile/bin/fish` (home-manager-path installs into the
+  user's default nix profile) via `builtins.replaceStrings` + `.text`. Keep the
+  placeholder - replacing it with a literal path would hardcode one host's user and
+  break the others (server user is `USERNAME`).
 - Non-nix-packaged tools (no nixpkgs entry, no binary cache) bootstrap themselves via a
   `home.activation.<name> = lib.hm.dag.entryAfter [ "writeBoundary" ] '' ... '';` block: guard
   with `command -v <tool>` so an already-bootstrapped machine's switch stays a fast no-op, and
