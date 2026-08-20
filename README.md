@@ -61,11 +61,48 @@ behavior is pinned by `tests/pi-calm.test.sh`.
   files under `wezterm/config/` are nix-managed. Don't commit in that clone.
 - **lazygit state** - `state.yml` is runtime state and stays gitignored.
 
-## Rebuild
+## Bootstrap
 
-```sh
-home-manager switch --flake ~/.dotfiles
-```
+One flake (`nix/flake.nix`) drives two hosts. Steps below go from a bare
+freshly-installed OS to a working switch; re-run the final command in each
+section any time to apply later changes.
+
+### Arch host (`homeConfigurations.USERNAME`)
+
+Standalone home-manager on Arch Linux, which isn't NixOS.
+
+1. Install Nix ([nixos.org/download](https://nixos.org/download)) and make
+   sure flakes are enabled (`experimental-features = nix-command flakes` in
+   `nix.conf`, if your installer doesn't already set it).
+2. Clone this repo to `~/.dotfiles`.
+3. `home-manager` isn't installed yet, so build and activate the flake output
+   directly:
+   ```sh
+   nix build ~/.dotfiles/nix#homeConfigurations.USERNAME.activationPackage
+   ./result/activate
+   ```
+   That puts `home-manager` on `PATH`. From then on:
+   ```sh
+   home-manager switch --flake ~/.dotfiles/nix#USERNAME
+   ```
+
+### WSL host (`nixosConfigurations.wsl`)
+
+A full NixOS-WSL system (NixOS itself as the WSL2 distro), with
+home-manager wired in as a NixOS module.
+
+1. Install [NixOS-WSL](https://github.com/nix-community/NixOS-WSL) as the
+   WSL2 distro on the Windows machine - see that project's own install docs.
+2. Clone this repo to `~/.dotfiles` (same path as the Arch host).
+3. Activate:
+   ```sh
+   sudo nixos-rebuild switch --flake ~/.dotfiles/nix#wsl
+   ```
+
+### Keys and credentials
+
+Neither host manages SSH keys, GPG keys, or anything else credential-shaped -
+set those up per machine, outside this repo.
 
 ## Attribution
 
