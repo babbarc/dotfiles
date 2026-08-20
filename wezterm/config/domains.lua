@@ -24,8 +24,15 @@ if platform.is_win then
          distribution = 'NixOS',
          username = env.get('WEZTERM_WSL_SYSTEM_USER', 'user'),
          default_cwd = '/home/' .. env.get('WEZTERM_WSL_SYSTEM_USER', 'user'),
-         -- nix/hosts/wsl/configuration.nix sets the user's shell to fish.
-         default_prog = { 'fish', '-l' },
+         -- No default_prog: setting one makes wezterm invoke `wsl.exe --exec
+         -- <prog>`, which does a raw execvpe() against a minimal PATH that
+         -- doesn't include this NixOS-WSL host's fish (a system-profile
+         -- symlink, not on a bare PATH). Omitting it lets wsl.exe use its
+         -- normal default-entry launch, which correctly resolves the user's
+         -- configured login shell (fish, set in
+         -- nix/hosts/wsl/configuration.nix). Confirmed on the real machine:
+         -- `wsl.exe --distribution NixOS --cd ... --user ... --exec fish -l`
+         -- fails with execvpe ENOENT; the same command without --exec works.
       },
    }
 end
