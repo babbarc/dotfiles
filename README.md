@@ -104,6 +104,46 @@ home-manager wired in as a NixOS module.
 Neither host manages SSH keys, GPG keys, or anything else credential-shaped -
 set those up per machine, outside this repo.
 
+### After the switch
+
+A few tools this repo configures are deliberately not Nix-packaged: their
+config is nix-managed, but the binary is installed and updated outside Nix.
+Run these once per machine, after the switch above.
+
+- **firstmate** - `~/firstmate` is a plain git clone
+  ([kunchenguid/firstmate](https://github.com/kunchenguid/firstmate)), the
+  same posture as `~/.dotfiles` itself (`nix/modules/dev/firstmate.nix`).
+  Clone it, then update it later via `git pull` or firstmate's own
+  `/updatefirstmate` skill. It also needs GitHub auth for PR creation - the
+  `gh` binary is nix-installed, but the login step isn't:
+  ```sh
+  gh auth login
+  ```
+- **herdr** - installed via its own curl installer, not nixpkgs
+  (`nix/modules/dev/herdr.nix`):
+  ```sh
+  curl -fsSL https://herdr.dev/install.sh | sh
+  ```
+  It lands at `~/.local/bin/herdr` and self-updates via `herdr update` /
+  `herdr channel set`. Only `herdr/config.toml` is nix-managed - see Notable
+  decisions above.
+- **treehouse, no-mistakes, and the axi suite** (`gh-axi`,
+  `chrome-devtools-axi`, `lavish-axi`, `tasks-axi`, `quota-axi`, `gnhf`) -
+  none are in nixpkgs (`nix/modules/dev/agent-cli-tools.nix`). The switch
+  above already fixes the npm global prefix
+  (`nix/modules/dev/npm-global.nix`), which these installs need, so just run:
+  ```sh
+  curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | sh
+  curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | sh
+  npm install -g gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi gnhf
+  ```
+  Update the same way: `treehouse update`; re-run the no-mistakes install
+  script (it has no separate update command); and
+  `npm update -g gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi gnhf`.
+
+Pi's own third-party extensions/themes and npm/git packages are managed by
+Pi's installer at runtime, not a manual step here.
+
 ## Attribution
 
 WezTerm styling (rose-pine-moon, dimmed unfocused windows), the Pi Calm
