@@ -39,6 +39,15 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   `nix/setup.sh` writes the file and wires the override in. wezterm parses the
   file at runtime (`wezterm/config/env.lua`), fish loads it via
   `fish/conf.d/dotfiles-env.fish`, and `.zshrc` sources it for zsh.
+- **Windows wezterm** - Windows machines don't run nix; they only consume the
+  wezterm overrides. `wezterm/setup-windows.ps1` is the Windows-side guided
+  setup (the counterpart to `nix/setup.sh`): it clones/pulls
+  KevinSilvester/wezterm-config into `%USERPROFILE%\.config\wezterm`, fetches
+  the 6 `wezterm/config/*.lua` overrides as raw files from the public GitHub
+  mirror, and writes `%USERPROFILE%\.config\dotfiles\env` with exactly the 10
+  Windows-relevant keys (the two `DOTFILES_SERVER_*` + eight `WEZTERM_*`
+  keys; `JOY_CONSOLE_*`/`STEREO_*` are never written there). See README's
+  'Windows wezterm' section under Bootstrap.
 - **Fresh-machine bootstrap** - `nix/setup.sh` is the single guided installer
   for all three hosts: detects the role (distro NixOS -> wsl, hostname `laptop`
   -> laptop, else prompts with default server; `--role`/`SETUP_ROLE` override),
