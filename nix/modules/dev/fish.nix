@@ -33,6 +33,16 @@
     set -g fish_greeting
   '';
 
+  # fish cannot rely on the Nix installer's /etc/fish/conf.d/nix.fish hook: its
+  # nix-daemon.fish add_path for $NIX_LINK/bin (the per-user profile) silently
+  # fails during fish login startup, so ~/.nix-profile/bin never lands on PATH in
+  # a clean ssh login. home-manager-path installs into the user's default nix
+  # profile (~/.nix-profile), so add both profile dirs explicitly. conf.d runs
+  # for interactive AND non-interactive shells.
+  xdg.configFile."fish/conf.d/nix-path.fish".text = ''
+    fish_add_path --prepend --global "$HOME/.nix-profile/bin" /nix/var/nix/profiles/default/bin
+  '';
+
   xdg.configFile = {
     "fish/functions/fisher.fish".source = "${fisher}/functions/fisher.fish";
     "fish/completions/fisher.fish".source = "${fisher}/completions/fisher.fish";
