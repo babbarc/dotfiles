@@ -17,5 +17,9 @@
     awscli
     influxdb2-cli
     neovim
+    # nvim-treesitter compiles parser C sources at runtime; without a C
+    # compiler `:checkhealth nvim-treesitter` fails its C-compiler requirement.
+    # pkgs.gcc (the wrapper) provides the `cc` symlink treesitter looks for.
+    gcc
   ];
 }
