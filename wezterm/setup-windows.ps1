@@ -3,24 +3,31 @@
 One-click Windows wezterm setup for the dotfiles repo.
 
 .DESCRIPTION
-Sets up the KevinSilvester/wezterm-config framework at
-%USERPROFILE%\.config\wezterm (clones it when missing, git pulls when present),
-overlays this repo's 6 config overrides (wezterm/config/*.lua, fetched as raw
-files from the public GitHub mirror), and creates/updates the per-machine env
-file at %USERPROFILE%\.config\dotfiles\env with exactly the Windows-relevant
-keys.
+Lays down this repo's own complete, self-contained wezterm config (19 files:
+wezterm.lua plus config/, utils/, events/ - fetched as raw files from the
+public GitHub mirror) at %USERPROFILE%\.config\wezterm, and creates/updates
+the per-machine env file at %USERPROFILE%\.config\dotfiles\env with exactly
+the Windows-relevant keys.
+
+This config has no dependency on the KevinSilvester/wezterm-config framework
+- earlier versions of this script cloned that framework and overlaid 6 files
+on top of it; this version migrates a machine that ran that older script by
+removing the leftover framework clone (its .git directory, backdrops/,
+colors/, and the utils/backdrops.lua + utils/gpu-adapter.lua files this
+config no longer uses) before laying down the 19 files.
 
 Idempotent: re-running keeps existing env values as the prompt defaults and
 only rewrites what changed. Pass -WhatIf to preview every step without
 changing anything.
 
-Requires PowerShell 5.1 or later, git, and network access. The script is
-ASCII-only on purpose (no encoding surprises on any Windows codepage).
+Requires PowerShell 5.1 or later and network access (no git needed - this
+script only downloads files over HTTPS). ASCII-only on purpose (no encoding
+surprises on any Windows codepage).
 
 .NOTES
 Mirrors what nix/setup.sh does per role, but for the Windows machine: this
-repo's public mirror is the source of the overrides, so no dotfiles checkout
-is needed on the Windows box. JOY_CONSOLE_*/STEREO_* keys are not needed on
+repo's public mirror is the source of the config, so no dotfiles checkout is
+needed on the Windows box. JOY_CONSOLE_*/STEREO_* keys are not needed on
 Windows and are never written.
 #>
 
@@ -44,9 +51,9 @@ function Write-Banner {
    Write-Host '  dotfiles - one-click Windows wezterm setup'
    Write-Host '============================================================'
    Write-Host ''
-   Write-Host '  Sets up the wezterm-config framework at'
+   Write-Host '  Lays down this repo''s own wezterm config at'
    Write-Host '    %USERPROFILE%\.config\wezterm'
-   Write-Host '  with this repo''s 6 config overrides, plus the per-machine'
+   Write-Host '  (no external framework dependency), plus the per-machine'
    Write-Host '  env file at'
    Write-Host '    %USERPROFILE%\.config\dotfiles\env'
    Write-Host ''
@@ -212,9 +219,35 @@ $ConfigDir  = Join-Path $WeztermDir 'config'
 $EnvDir     = Join-Path $ConfigRoot 'dotfiles'
 $EnvFile    = Join-Path $EnvDir 'env'
 
-$FrameworkUrl = 'https://github.com/KevinSilvester/wezterm-config.git'
-$OverlayBase  = 'https://raw.githubusercontent.com/babbarc/dotfiles/master/wezterm/config/'
-$OverrideFiles = @('appearance.lua', 'bindings.lua', 'domains.lua', 'env.lua', 'fonts.lua', 'launch.lua')
+$ConfigBase = 'https://raw.githubusercontent.com/babbarc/dotfiles/master/wezterm/'
+# Every file this config's wezterm.lua transitively require()s, relative to
+# $ConfigBase / $WeztermDir. Keep in sync with the wezterm/ tree in the repo -
+# there is no directory listing to fetch from a raw.githubusercontent.com URL,
+# so the file list has to be named explicitly.
+$ConfigFiles = @(
+   'wezterm.lua',
+   'config/appearance.lua',
+   'config/bindings.lua',
+   'config/domains.lua',
+   'config/env.lua',
+   'config/fonts.lua',
+   'config/general.lua',
+   'config/init.lua',
+   'config/launch.lua',
+   'utils/cells.lua',
+   'utils/math.lua',
+   'utils/opts-validator.lua',
+   'utils/platform.lua',
+   'utils/str.lua',
+   'events/gui-startup.lua',
+   'events/left-status.lua',
+   'events/new-tab-button.lua',
+   'events/right-status.lua',
+   'events/tab-title.lua'
+)
+# Leftovers from the old KevinSilvester/wezterm-config framework clone that
+# this config no longer uses (see migration cleanup below).
+$StaleFrameworkPaths = @('.git', 'backdrops', 'colors', 'utils\backdrops.lua', 'utils\gpu-adapter.lua')
 $EnvKeys = @(
    'DOTFILES_SERVER_HOST',
    'DOTFILES_SERVER_USER',
@@ -236,48 +269,39 @@ if ($PSVersionTable.PSEdition -eq 'Core' -and -not $IsWindows) {
 # --- prerequisites ------------------------------------------------------------
 
 Write-Step 'Checking prerequisites'
-$gitCmd = Get-Command git -ErrorAction SilentlyContinue
-if (-not $gitCmd) {
-   Write-Fail 'git was not found on PATH - install Git for Windows (https://git-scm.com/download/win) and re-run this script'
-}
-Write-Info ('  git:      ' + (git --version))
 Write-Info ('  home dir: ' + $HomeDir)
+Write-Info '  (no git required - this script only downloads files over HTTPS)'
 
-# --- framework ----------------------------------------------------------------
+# --- migration: remove a leftover KevinSilvester/wezterm-config clone --------
 
-Write-Step 'wezterm-config framework'
-if (-not (Test-Path -LiteralPath $WeztermDir)) {
-   Write-Info ('  no framework at ' + $WeztermDir + ' - cloning it')
-   if ($PSCmdlet.ShouldProcess($WeztermDir, 'git clone ' + $FrameworkUrl)) {
-      New-Item -ItemType Directory -Force -Path $ConfigRoot | Out-Null
-      & git clone $FrameworkUrl $WeztermDir
-      if ($LASTEXITCODE -ne 0) { Write-Fail 'git clone of the wezterm-config framework failed' }
-      Write-Info '  cloned framework'
-   }
-} else {
-   Write-Info ('  framework already present at ' + $WeztermDir)
-   if ($PSCmdlet.ShouldProcess($WeztermDir, 'git pull (update the framework)')) {
-      & git -C $WeztermDir pull
-      if ($LASTEXITCODE -ne 0) {
-         Write-Warn 'git pull had issues - continuing anyway (the 6 overrides are re-copied below and still apply)'
-      } else {
-         Write-Info '  pulled latest framework'
+$StaleFound = @($StaleFrameworkPaths | Where-Object { Test-Path -LiteralPath (Join-Path $WeztermDir $_) })
+if ($StaleFound.Count -gt 0) {
+   Write-Step 'Removing leftover wezterm-config framework files'
+   Write-Info '  an earlier version of this script cloned KevinSilvester/wezterm-config;'
+   Write-Info '  this config does not use it any more, so these are being removed:'
+   foreach ($rel in $StaleFound) {
+      $full = Join-Path $WeztermDir $rel
+      if ($PSCmdlet.ShouldProcess($full, 'remove leftover framework path')) {
+         Remove-Item -LiteralPath $full -Recurse -Force
+         Write-Info ('  removed ' + $rel)
       }
    }
 }
 
-if ($WhatIfPreference) {
-   Write-Info '  (-WhatIf) framework clone/pull skipped - a real run would clone or update it here'
-} elseif (-not (Test-Path -LiteralPath (Join-Path $WeztermDir 'wezterm.lua'))) {
-   Write-Fail ('framework entry wezterm.lua not found under ' + $WeztermDir + ' - the clone looks wrong')
+# --- config files ---------------------------------------------------------------
+
+Write-Step 'Writing the wezterm config'
+if (-not $WhatIfPreference) {
+   New-Item -ItemType Directory -Force -Path $ConfigRoot | Out-Null
+   New-Item -ItemType Directory -Force -Path $WeztermDir | Out-Null
+   New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
+   New-Item -ItemType Directory -Force -Path (Join-Path $WeztermDir 'utils') | Out-Null
+   New-Item -ItemType Directory -Force -Path (Join-Path $WeztermDir 'events') | Out-Null
 }
 
-# --- overrides ----------------------------------------------------------------
-
-Write-Step 'Overlaying the 6 config overrides'
-foreach ($f in $OverrideFiles) {
-   $dest = Join-Path $ConfigDir $f
-   $url = $OverlayBase + $f
+foreach ($f in $ConfigFiles) {
+   $dest = Join-Path $WeztermDir ($f -replace '/', [IO.Path]::DirectorySeparatorChar)
+   $url = $ConfigBase + $f
    if ($PSCmdlet.ShouldProcess($dest, 'download ' + $f + ' from ' + $url)) {
       try {
          Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $dest
@@ -286,7 +310,7 @@ foreach ($f in $OverrideFiles) {
          if (-not ($firstLine -like 'local*' -or $firstLine -like '--*')) {
             throw ('downloaded file does not look like a lua config (first line: ' + $firstLine + ')')
          }
-         Write-Info ('  config/' + $f)
+         Write-Info ('  ' + $f)
       } catch {
          Write-Fail ('failed to download ' + $f + ' from ' + $url + ' - ' + $_.Exception.Message)
       }
@@ -332,12 +356,12 @@ if ($WhatIfPreference) {
 
 Write-Step 'Done'
 Write-Host ''
-Write-Host ('  wezterm config : ' + $WeztermDir + '   (framework + 6 overrides)')
+Write-Host ('  wezterm config : ' + $WeztermDir + '   (' + $ConfigFiles.Count + ' files, no external framework)')
 Write-Host ('  per-machine env : ' + $EnvFile)
 Write-Host ''
 Write-Host '  Restart wezterm (close all its windows) to load the new config.'
-Write-Host '  Re-run this script any time to update the framework and re-apply'
-Write-Host '  the overrides. The env file is plaintext and machine-specific -'
+Write-Host '  Re-run this script any time to update - it re-downloads all'
+Write-Host '  files above. The env file is plaintext and machine-specific -'
 Write-Host '  keep it out of version control and keep secrets out of it.'
 Write-Host ''
 if ($WhatIfPreference) {

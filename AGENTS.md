@@ -39,15 +39,35 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   `nix/setup.sh` writes the file and wires the override in. wezterm parses the
   file at runtime (`wezterm/config/env.lua`), fish loads it via
   `fish/conf.d/dotfiles-env.fish`, and `.zshrc` sources it for zsh.
-- **Windows wezterm** - Windows machines don't run nix; they only consume the
-  wezterm overrides. `wezterm/setup-windows.ps1` is the Windows-side guided
-  setup (the counterpart to `nix/setup.sh`): it clones/pulls
-  KevinSilvester/wezterm-config into `%USERPROFILE%\.config\wezterm`, fetches
-  the 6 `wezterm/config/*.lua` overrides as raw files from the public GitHub
-  mirror, and writes `%USERPROFILE%\.config\dotfiles\env` with exactly the 10
-  Windows-relevant keys (the two `DOTFILES_SERVER_*` + eight `WEZTERM_*`
-  keys; `JOY_CONSOLE_*`/`STEREO_*` are never written there). See README's
-  'Windows wezterm' section under Bootstrap.
+- **wezterm config is fully self-contained in this repo** - `wezterm/`
+  (`wezterm.lua`, `config/`, `utils/`, `events/`) is a complete, independent
+  wezterm config with no runtime dependency on the upstream
+  `KevinSilvester/wezterm-config` framework (that framework was only ever a
+  starting point; the still-useful parts of it were vendored in, MIT
+  attribution headers included, and re-themed - `utils/backdrops.lua`,
+  `utils/gpu-adapter.lua`, and `colors/custom.lua` were dropped rather than
+  vendored, since they were the source of a hardcoded-color/theme-mismatch
+  bug rather than something worth keeping). The laptop gets it via
+  `nix/modules/wezterm.nix` symlinking the whole tree into
+  `~/.config/wezterm`; Windows gets it via `wezterm/setup-windows.ps1`
+  fetching the same files as raw content from the public GitHub mirror. Both
+  hosts run byte-identical config by construction - see
+  `wezterm/config/appearance.lua`'s comments for the reasoning behind its
+  settings before changing them, especially `front_end`/`window_background_opacity`
+  (WebGpu + opacity + a background image was a real, evidenced bug class,
+  not just a style choice).
+- **Windows wezterm** - Windows machines don't run nix; they only consume
+  wezterm's config. `wezterm/setup-windows.ps1` is the Windows-side guided
+  setup (the counterpart to `nix/setup.sh`, no git required - it only
+  downloads files over HTTPS): it fetches all of `wezterm/`'s files as raw
+  content from the public GitHub mirror into `%USERPROFILE%\.config\wezterm`,
+  migrates away any leftover `KevinSilvester/wezterm-config` clone from an
+  older version of this script (its `.git`, `backdrops/`, `colors/`, and the
+  two dropped `utils/*.lua` files), and writes
+  `%USERPROFILE%\.config\dotfiles\env` with exactly the 10 Windows-relevant
+  keys (the two `DOTFILES_SERVER_*` + eight `WEZTERM_*` keys;
+  `JOY_CONSOLE_*`/`STEREO_*` are never written there). See README's 'Windows
+  wezterm' section under Bootstrap.
 - **Fresh-machine bootstrap** - `nix/setup.sh` is the single guided installer
   for all three hosts: detects the role (distro NixOS -> wsl, hostname `laptop`
   -> laptop, else prompts with default server; `--role`/`SETUP_ROLE` override),

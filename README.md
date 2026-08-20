@@ -60,9 +60,10 @@ Running the switch builds:
 ```
 nix/                  Nix home-manager flake and per-tool modules
 pi/                   Pi agent files: AGENTS.md, theme, extensions (incl. Calm)
-wezterm/              The 6 config files that diverge from the wezterm-config
-                      framework clone at ~/.config/wezterm, plus
-                      setup-windows.ps1 (one-click Windows wezterm setup)
+wezterm/              Complete, self-contained wezterm config (wezterm.lua,
+                      config/, utils/, events/ - no external framework
+                      dependency), plus setup-windows.ps1 (one-click Windows
+                      wezterm setup)
 herdr/                herdr config.toml (read-only in the store; edit here)
 nvim/                 lazyvim setup
 fish/                 shell config
@@ -94,8 +95,12 @@ behavior is pinned by `tests/pi-calm.test.sh`.
   read-only nix-store copy with a documented tradeoff: edit
   `herdr/config.toml` and run `home-manager switch` to apply; don't rely on
   herdr's own settings UI to persist.
-- **wezterm** - `~/.config/wezterm` is an upstream framework clone; only the 6
-  files under `wezterm/config/` are nix-managed. Don't commit in that clone.
+- **wezterm** - `~/.config/wezterm` is this repo's own `wezterm/` tree
+  (nix-managed on the laptop, downloaded by `setup-windows.ps1` on Windows) -
+  not a clone of an external framework. `wezterm/utils/` and `wezterm/events/`
+  vendor the still-useful parts of the `KevinSilvester/wezterm-config`
+  framework this config started from (MIT-licensed, attribution headers in
+  each file).
 - **lazygit state** - `state.yml` is runtime state and stays gitignored.
 
 ## Per-machine values (`~/.config/dotfiles/env`)
@@ -275,9 +280,9 @@ hand - still nix-only):
 ### Windows wezterm (`wezterm/setup-windows.ps1`)
 
 Windows machines don't run this repo's nix flake - they only consume its
-wezterm overrides. `wezterm/setup-windows.ps1` does the whole setup in one
-run; it needs nothing beyond git and PowerShell 5.1+ (the script is
-ASCII-only and `-WhatIf`-aware):
+wezterm config. `wezterm/setup-windows.ps1` does the whole setup in one
+run; it needs nothing beyond PowerShell 5.1+ (no git - it only downloads
+files over HTTPS; the script is ASCII-only and `-WhatIf`-aware):
 
 ```powershell
 # one-liner - fetch the script from the public mirror and run it
@@ -289,14 +294,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://raw.githubus
 
 The script is idempotent and does three things:
 
-1. **Framework** - clones `KevinSilvester/wezterm-config` into
-   `%USERPROFILE%\.config\wezterm` when missing, or `git pull`s an existing
-   clone (then re-applies the overrides below, so the 6 files this repo owns
-   are always reset to this repo's versions).
-2. **Overrides** - downloads this repo's 6 `wezterm/config/*.lua` files
-   (appearance, bindings, domains, env, fonts, launch) as raw files from the
-   public GitHub mirror over the framework's `config/`. env.lua is the
-   repo-only addition; the other five replace the framework's versions.
+1. **Migration** - if an earlier version of this script left a
+   `KevinSilvester/wezterm-config` clone behind (this config no longer uses
+   that framework), removes its leftover `.git`, `backdrops/`, `colors/`,
+   and the two `utils/backdrops.lua` / `utils/gpu-adapter.lua` files this
+   config dropped. A no-op on a machine that never ran the old script.
+2. **Config** - downloads this repo's complete `wezterm/` tree (19 files:
+   `wezterm.lua` plus everything under `config/`, `utils/`, `events/`) as
+   raw files from the public GitHub mirror into
+   `%USERPROFILE%\.config\wezterm`, recreating the same directory structure.
 3. **Env file** - prompts for the Windows values and writes
    `%USERPROFILE%\.config\dotfiles\env` with exactly the Windows-relevant
    keys: `DOTFILES_SERVER_HOST`, `DOTFILES_SERVER_USER`, `WEZTERM_SSH_WSL_USER`,
@@ -308,25 +314,24 @@ The script is idempotent and does three things:
    values. The WSL users default to your Windows username, the WSL distro to
    `NixOS`, and Git Bash to its standard install path.
 
-Restart wezterm after it finishes. Re-run the script any time to update the
-framework and re-apply the overrides; pass `-WhatIf` for a dry-run that
-prints every step without changing anything.
+Restart wezterm after it finishes. Re-run the script any time to update -
+it re-downloads every file above; pass `-WhatIf` for a dry-run that prints
+every step without changing anything.
 
 **Manual fallback** - the same steps, driven by hand:
 
-1. Clone the framework:
+1. Download every file listed in `$ConfigFiles` near the top of
+   `wezterm/setup-windows.ps1` from the public mirror into the matching
+   path under `%USERPROFILE%\.config\wezterm`, e.g.:
    ```powershell
-   git clone https://github.com/KevinSilvester/wezterm-config.git "$env:USERPROFILE\.config\wezterm"
-   ```
-2. Overlay the 6 overrides (pull the clone first if it already exists, then
-   re-overlay):
-   ```powershell
-   $dst = "$env:USERPROFILE\.config\wezterm\config"
-   foreach ($f in 'appearance.lua','bindings.lua','domains.lua','env.lua','fonts.lua','launch.lua') {
-     iwr "https://raw.githubusercontent.com/babbarc/dotfiles/master/wezterm/config/$f" -UseBasicParsing -o "$dst\$f"
+   $dst = "$env:USERPROFILE\.config\wezterm"
+   New-Item -ItemType Directory -Force "$dst\config","$dst\utils","$dst\events" | Out-Null
+   foreach ($f in 'wezterm.lua','config/appearance.lua','config/bindings.lua','config/domains.lua','config/env.lua','config/fonts.lua','config/general.lua','config/init.lua','config/launch.lua','utils/cells.lua','utils/math.lua','utils/opts-validator.lua','utils/platform.lua','utils/str.lua','events/gui-startup.lua','events/left-status.lua','events/new-tab-button.lua','events/right-status.lua','events/tab-title.lua') {
+     $out = Join-Path $dst ($f -replace '/','\')
+     iwr "https://raw.githubusercontent.com/babbarc/dotfiles/master/wezterm/$f" -UseBasicParsing -o $out
    }
    ```
-3. Create the env file - copy the "wezterm (Windows / WSL)" block from
+2. Create the env file - copy the "wezterm (Windows / WSL)" block from
    `env.example` and fill in the 10 keys listed above (plain `KEY=VALUE`
    lines, `#` whole-line comments; `JOY_CONSOLE_*` and `STEREO_*` keys are
    not needed on Windows):
@@ -334,7 +339,7 @@ prints every step without changing anything.
    New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\dotfiles" | Out-Null
    notepad "$env:USERPROFILE\.config\dotfiles\env"
    ```
-4. Restart wezterm.
+3. Restart wezterm.
 
 ### Keys and credentials
 
