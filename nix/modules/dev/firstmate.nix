@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 {
   # ~/firstmate is a plain git clone (github:kunchenguid/firstmate), not
   # nix-tracked — same posture as ~/.dotfiles itself and wezterm's upstream
@@ -29,4 +29,26 @@
     # file > auto-detect > default tmux).
     FM_BACKEND = "herdr";
   };
+
+  # One-time bootstrap: clone firstmate on a fresh machine. Never touch the
+  # directory again once it exists — it holds the captain's own in-progress
+  # work, not something this module should ever overwrite or update.
+  # `||`-guarded so a failed clone (no network) only warns on stderr instead
+  # of failing the whole `home-manager switch`; see agent-cli-tools.nix for
+  # the same posture applied to treehouse/no-mistakes/the axi suite.
+  home.activation.firstmateClone = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    firstmate_dir="${config.home.homeDirectory}/firstmate"
+    if [ ! -d "$firstmate_dir" ]; then
+      $DRY_RUN_CMD ${pkgs.git}/bin/git clone https://github.com/kunchenguid/firstmate.git "$firstmate_dir" \
+        || echo "warning: could not clone firstmate into $firstmate_dir (offline?) - retry later with: git clone https://github.com/kunchenguid/firstmate.git $firstmate_dir" >&2
+    fi
+  '';
+
+  # gh auth login is an interactive OAuth device-code flow - it is never
+  # scripted here. This only prints a one-line reminder when not yet
+  # authenticated; it never blocks or fails the switch either way.
+  home.activation.ghAuthReminder = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    ${pkgs.gh}/bin/gh auth status >/dev/null 2>&1 \
+      || echo "hint: run 'gh auth login' to authenticate the GitHub CLI (firstmate needs it for PR creation)" >&2
+  '';
 }

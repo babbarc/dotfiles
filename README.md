@@ -107,42 +107,52 @@ set those up per machine, outside this repo.
 ### After the switch
 
 A few tools this repo configures are deliberately not Nix-packaged: their
-config is nix-managed, but the binary is installed and updated outside Nix.
-Run these once per machine, after the switch above.
+config is nix-managed, but the binary has no nixpkgs entry and no binary
+cache. These install themselves automatically on your first switch, via a
+guarded `home.activation` block per tool (`lib.hm.dag.entryAfter [
+"writeBoundary" ]`, the same mechanism `nix/modules/dev/pi.nix` uses to merge
+`settings.json`) - here's what happens and why:
 
-- **firstmate** - `~/firstmate` is a plain git clone
-  ([kunchenguid/firstmate](https://github.com/kunchenguid/firstmate)), the
-  same posture as `~/.dotfiles` itself (`nix/modules/dev/firstmate.nix`).
-  Clone it, then update it later via `git pull` or firstmate's own
-  `/updatefirstmate` skill. It also needs GitHub auth for PR creation - the
-  `gh` binary is nix-installed, but the login step isn't:
-  ```sh
-  gh auth login
-  ```
-- **herdr** - installed via its own curl installer, not nixpkgs
-  (`nix/modules/dev/herdr.nix`):
-  ```sh
-  curl -fsSL https://herdr.dev/install.sh | sh
-  ```
-  It lands at `~/.local/bin/herdr` and self-updates via `herdr update` /
-  `herdr channel set`. Only `herdr/config.toml` is nix-managed - see Notable
-  decisions above.
-- **treehouse, no-mistakes, and the axi suite** (`gh-axi`,
-  `chrome-devtools-axi`, `lavish-axi`, `tasks-axi`, `quota-axi`, `gnhf`) -
-  none are in nixpkgs (`nix/modules/dev/agent-cli-tools.nix`). The switch
-  above already fixes the npm global prefix
-  (`nix/modules/dev/npm-global.nix`), which these installs need, so just run:
-  ```sh
-  curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | sh
-  curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | sh
-  npm install -g gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi gnhf
-  ```
-  Update the same way: `treehouse update`; re-run the no-mistakes install
-  script (it has no separate update command); and
+- **firstmate** - if `~/firstmate` doesn't already exist, it's cloned from
+  [kunchenguid/firstmate](https://github.com/kunchenguid/firstmate)
+  (`nix/modules/dev/firstmate.nix`), the same posture as `~/.dotfiles`
+  itself. Once it exists, no switch ever touches it again - it holds your own
+  in-progress firstmate work. Update it yourself via `git pull` or
+  firstmate's own `/updatefirstmate` skill.
+- **herdr** - if `herdr` isn't on `PATH`, its curl installer runs
+  (`nix/modules/dev/herdr.nix`). It lands at `~/.local/bin/herdr` and
+  self-updates afterward via `herdr update` / `herdr channel set`. Only
+  `herdr/config.toml` is nix-managed - see Notable decisions above.
+- **treehouse and no-mistakes** - if either isn't on `PATH`, its curl
+  installer runs (`nix/modules/dev/agent-cli-tools.nix`). Update with
+  `treehouse update`; no-mistakes has no separate update command, so its
+  installer is just re-run.
+- **axi suite** (`gh-axi`, `chrome-devtools-axi`, `lavish-axi`, `tasks-axi`,
+  `quota-axi`, `gnhf`) - if any of the six is missing, `npm install -g` runs
+  for the whole suite. This needs a writable npm prefix, which
+  `nix/modules/dev/npm-global.nix`'s `~/.npmrc` already provides by the time
+  any activation block runs. Update with
   `npm update -g gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi gnhf`.
 
+Every block above only runs when its tool is missing, so a switch on an
+already-bootstrapped machine stays a fast no-op instead of a network call
+every time. Each is also `||`-guarded so a failed curl/git/npm (no network, a
+flaky mirror) only prints a warning and lets the rest of the switch proceed -
+none of these installs can fail a `home-manager switch` outright. If you see
+a warning, just re-run the switch once you're back online.
+
+**The one step that stays manual: `gh auth login`.** It's an interactive
+OAuth device-code flow, so it can't be scripted into activation - the `gh`
+binary itself is nix-installed, but you authenticate it yourself, whenever
+you're ready:
+```sh
+gh auth login
+```
+The switch prints a one-line reminder (via `gh auth status`) if you aren't
+authenticated yet, but never blocks or fails on it.
+
 Pi's own third-party extensions/themes and npm/git packages are managed by
-Pi's installer at runtime, not a manual step here.
+Pi's installer at runtime, not a bootstrap step here.
 
 ## Attribution
 

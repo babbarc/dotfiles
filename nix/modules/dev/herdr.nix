@@ -1,10 +1,12 @@
-{ ... }:
+{ lib, pkgs, ... }:
 {
   # herdr itself is deliberately outside Nix (not in nixpkgs, no binary
   # cache, would require a from-source build — see the parent nix-migration
   # project's Task 9). It stays installed via its own curl installer at
   # ~/.local/bin/herdr, self-updating via `herdr update` / `herdr channel
-  # set`. This module never touches the binary.
+  # set`. This module never touches the binary beyond the one-time bootstrap
+  # below - re-running the installer on every switch is left to `herdr
+  # update`, not this module.
   #
   # Only config.toml is genuinely user config. session.json, .plugins.lock,
   # and the two .log files are runtime-written and stay unmanaged plain
@@ -34,4 +36,20 @@
   # `home-manager switch` — don't rely on herdr's own settings UI or
   # `reset-keys` to persist changes.
   xdg.configFile."herdr/config.toml".source = ../../../herdr/config.toml;
+
+  # One-time bootstrap: install herdr itself via its curl installer if it's
+  # not already on PATH, so a fresh machine's first switch doesn't need the
+  # manual command from the README. `||`-guarded so a failed curl (no
+  # network) only warns on stderr instead of failing the whole
+  # `home-manager switch`.
+  home.activation.herdrInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if ! command -v herdr >/dev/null 2>&1; then
+      if [ -n "$DRY_RUN_CMD" ]; then
+        echo "$DRY_RUN_CMD would install herdr via: curl -fsSL https://herdr.dev/install.sh | sh"
+      else
+        ${pkgs.curl}/bin/curl -fsSL https://herdr.dev/install.sh | sh \
+          || echo "warning: herdr install failed (offline?) - retry later with: curl -fsSL https://herdr.dev/install.sh | sh" >&2
+      fi
+    fi
+  '';
 }

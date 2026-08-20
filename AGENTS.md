@@ -48,6 +48,16 @@ never centralized in `modules/dev/`; set them up per-machine outside Nix.
   absolute `~/.config/...` path - that breaks once home-manager replaces them with
   read-only Nix-store symlinks (wezterm.nix's header comment documents a real instance
   of this class of problem).
+- Non-nix-packaged tools (no nixpkgs entry, no binary cache) bootstrap themselves via a
+  `home.activation.<name> = lib.hm.dag.entryAfter [ "writeBoundary" ] '' ... '';` block: guard
+  with `command -v <tool>` (or a directory-existence check) so an already-bootstrapped machine's
+  switch stays a fast no-op, and `||`-guard the install command itself so a failed curl/git/npm
+  only warns on stderr instead of failing the whole `home-manager switch`. `writeBoundary` is the
+  dag node where every `home.file`/`xdg.configFile` write lands, so any block that runs
+  `entryAfter [ "writeBoundary" ]` sees those files regardless of module import order - no
+  explicit cross-module activation ordering is needed. See `nix/modules/dev/pi.nix`
+  (settings.json merge), `nix/modules/dev/firstmate.nix`, `nix/modules/dev/herdr.nix`, and
+  `nix/modules/dev/agent-cli-tools.nix` for worked examples.
 
 ## Maintaining this file
 
