@@ -16,6 +16,19 @@ let
   # Per-machine username from ~/.config/dotfiles/env (see env.example); the
   # committed example/placeholder keeps eval working on a fresh clone.
   username = dotfilesEnv.DOTFILES_USERNAME or "user";
+  # Optional corporate root CA to trust (see env.example). Absolute path to a
+  # file already on disk. Empty on machines with no TLS-intercepting proxy.
+  # `/. + certFileStr` (not the bare string) converts it to a real Nix path
+  # value: security.pki.certificateFiles feeds cacert's build, which runs
+  # sandboxed with no access to arbitrary host paths, so the file must be
+  # imported into the Nix store at eval time (a bare string builds the CA
+  # bundle from that literal path at build time and fails with "No such file
+  # or directory" inside the sandbox - confirmed by hand). Importing an
+  # out-of-flake path also needs `nix build --impure` (flakes evaluate pure
+  # by default, which otherwise refuses the path outright) - nix/setup.sh
+  # adds that flag automatically, only when this key is set.
+  certFileStr = dotfilesEnv.DOTFILES_CORPORATE_CA_FILE or "";
+  certFile = lib.optional (certFileStr != "") (/. + certFileStr);
 in
 {
   imports = [
@@ -48,6 +61,8 @@ in
   # no custom `pkgs` passed to nixosSystem, so the same exception has to be
   # set here instead, via the module system.
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "unrar" ];
+
+  security.pki.certificateFiles = certFile;
 
   # Matches nix/home.nix's home.stateVersion - do not bump either without
   # reading home-manager's stateVersion documentation first.
