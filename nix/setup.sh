@@ -85,6 +85,22 @@ info() { printf '%s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }
 die()  { printf 'error: %s\n' "$*" >&2; exit 1; }
 
+# retry <cmd...>: retry a command up to 3 times with a short backoff, for
+# network calls that can transiently fail early after a fresh boot (e.g. a
+# WSL2 VM's network/DNS taking a few seconds to stabilize). Prints a warning
+# between attempts; the final failure still propagates normally.
+retry() {
+  local attempts=3 delay=5 n=1
+  until "$@"; do
+    if [ "$n" -ge "$attempts" ]; then
+      return 1
+    fi
+    warn "command failed (attempt $n/$attempts) - retrying in ${delay}s: $*"
+    sleep "$delay"
+    n=$((n + 1))
+  done
+}
+
 DRY_RUN=0
 ROLE=""
 while [ "$#" -gt 0 ]; do
@@ -517,21 +533,21 @@ if [ "$DRY_RUN" -eq 1 ]; then
     echo "  # which use the exported env vars directly and are unaffected either way."
   fi
   case "$SOURCE" in
-    1) echo "  nix-prefetch-url --unpack --print-path \"$LAN_URL\"" ;;
+    1) echo "  retry nix-prefetch-url --unpack --print-path \"$LAN_URL\"" ;;
     2)
       if [ "$HAS_GIT" -eq 1 ]; then
         if [ -e "$HOME/.dotfiles" ] && [ -n "$(ls -A "$HOME/.dotfiles" 2>/dev/null)" ]; then
-          echo "  # $HOME/.dotfiles already exists - clone skipped, repo reused"
+          echo "  retry git -C \"$HOME/.dotfiles\" pull --ff-only  # existing repo reused, updated with a fast-forward pull"
         else
-          echo "  git clone \"$GH_URL\" \"$HOME/.dotfiles\""
+          echo "  retry git clone \"$GH_URL\" \"$HOME/.dotfiles\""
         fi
       else
-        echo "  nix-prefetch-url --unpack --print-path \"$GH_TARBALL\""
+        echo "  retry nix-prefetch-url --unpack --print-path \"$GH_TARBALL\""
       fi
       ;;
     3) echo "  # existing checkout at $LOCAL_REPO reused (linked to ~/.dotfiles if free)" ;;
   esac
-  echo "  ${BUILD_CMD[*]}"
+  echo "  retry ${BUILD_CMD[*]}"
   echo "  ${ACTIVATE[*]}"
   echo "# dry-run complete."
   exit 0
@@ -666,24 +682,26 @@ fetch_repo() {
   case "$SOURCE" in
     1)
       info "fetching the repo tarball from your Gitea (cached for the build)..."
-      store="$(nix-prefetch-url --unpack --print-path "$LAN_URL" | tail -n 1)"
+      store="$(retry nix-prefetch-url --unpack --print-path "$LAN_URL" | tail -n 1)"
       unpack_repo "$store"
       ;;
     2)
       if [ "$HAS_GIT" -eq 1 ]; then
         if [ -e "$HOME/.dotfiles" ] && [ -n "$(ls -A "$HOME/.dotfiles" 2>/dev/null)" ]; then
           if repo_present_at "$HOME/.dotfiles"; then
-            info "reusing existing $HOME/.dotfiles (no clone)"
+            info "pulling latest into existing $HOME/.dotfiles..."
+            retry git -C "$HOME/.dotfiles" pull --ff-only ||
+              die "git pull --ff-only failed in $HOME/.dotfiles - it has local/diverged commits that can't fast-forward; resolve or move it aside and re-run"
           else
             die "$HOME/.dotfiles exists but does not look like this repo - move it aside or choose a different source"
           fi
         else
           info "cloning the public GitHub mirror to $HOME/.dotfiles..."
-          git clone "$GH_URL" "$HOME/.dotfiles"
+          retry git clone "$GH_URL" "$HOME/.dotfiles"
         fi
       else
         info "fetching the repo tarball from the GitHub mirror (cached for the build)..."
-        store="$(nix-prefetch-url --unpack --print-path "$GH_TARBALL" | tail -n 1)"
+        store="$(retry nix-prefetch-url --unpack --print-path "$GH_TARBALL" | tail -n 1)"
         unpack_repo "$store"
       fi
       ;;
@@ -728,7 +746,7 @@ log "Build"
 info "building $HOST_LABEL from $BUILD_FLAKE"
 info "  (first run downloads nixpkgs + home-manager - a few hundred MB and a few minutes; later runs are fast)"
 info "running: ${BUILD_CMD[*]}"
-"${BUILD_CMD[@]}"
+retry "${BUILD_CMD[@]}"
 
 log "Activate"
 info "running: ${ACTIVATE[*]}"
