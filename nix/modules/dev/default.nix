@@ -8,6 +8,7 @@
     ./cli-tools.nix
     ./dev-toolchains.nix
     ./fish.nix
+    ./git.nix
     ./nvim.nix
     ./lazygit.nix
     ./firstmate.nix
