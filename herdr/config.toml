@@ -53,9 +53,9 @@ default_shell = "__FISH_SHELL_PATH__"
 # manifest_check = true
 
 [keys]
-# Tmux-style bindings, adopted from kunchenguid/dotfiles: ctrl+b prefix,
+# Tmux-style bindings, adopted from kunchenguid/dotfiles: ctrl+a prefix,
 # h/j/k/l pane focus, " and % splits, & close tab, y copy mode.
-prefix = "ctrl+b"
+prefix = "ctrl+a"
 focus_pane_left  = "prefix+h"
 focus_pane_down  = "prefix+j"
 focus_pane_up    = "prefix+k"
