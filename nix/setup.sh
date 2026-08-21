@@ -124,6 +124,12 @@ fi
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Per-machine env file location (override for testing).
 ENV_FILE="${SETUP_ENV_FILE:-$HOME/.config/dotfiles/env}"
+# Persistent corporate CA bundle assembled for this script's own fetches (see
+# the "Bootstrap" section below) - lives next to $ENV_FILE, not under /tmp:
+# mktemp's default TMPDIR is /tmp, and a sandboxed nix build gets its own
+# private, empty /tmp, so a /tmp path is not a reliable place to put a file
+# that anything sandbox-adjacent needs to see. Overwritten fresh on every run.
+CA_BUNDLE_FILE="${SETUP_CA_BUNDLE_FILE:-$HOME/.config/dotfiles/bootstrap-ca.crt}"
 
 # ask <prompt> <default>: prints the prompt (with "[default]: " when a
 # default exists) on stderr and echoes the answer on stdout. Empty input takes
@@ -498,8 +504,17 @@ if [ "$DRY_RUN" -eq 1 ]; then
     echo "  # bootstrap trust for this script's own fetches (nix build/git/curl below"
     echo "  # need it before the declarative security.pki.certificateFiles work can"
     echo "  # ever apply - that only affects the system this script has yet to build):"
-    echo "  cat <system default CA bundle> $DOTFILES_CORPORATE_CA_DIR/* > <temp bundle>"
-    echo "  export NIX_SSL_CERT_FILE=<temp bundle> SSL_CERT_FILE=<temp bundle> GIT_SSL_CAINFO=<temp bundle>"
+    echo "  cat <system default CA bundle> $DOTFILES_CORPORATE_CA_DIR/* > $CA_BUNDLE_FILE"
+    echo "  export NIX_SSL_CERT_FILE=$CA_BUNDLE_FILE SSL_CERT_FILE=$CA_BUNDLE_FILE GIT_SSL_CAINFO=$CA_BUNDLE_FILE"
+    echo "  # also passed to the build below as --option ssl-cert-file: this reaches a"
+    echo "  # multi-user nix-daemon's own substituter/fixed-output-derivation fetches"
+    echo "  # only if this account is a trusted user (nix.settings.trusted-users) -"
+    echo "  # NIX_SSL_CERT_FILE/SSL_CERT_FILE alone never reach daemon-side fetches,"
+    echo "  # confirmed by hand: the daemon computes its own default from its own"
+    echo "  # (systemd-service) environment, not the connecting client's. On an"
+    echo "  # untrusted connection nix will print its own warning that the setting"
+    echo "  # was ignored - that does not affect this script's own fetches above,"
+    echo "  # which use the exported env vars directly and are unaffected either way."
   fi
   case "$SOURCE" in
     1) echo "  nix-prefetch-url --unpack --print-path \"$LAN_URL\"" ;;
@@ -564,31 +579,56 @@ info "flakes enabled for this session (NIX_CONFIG; /etc/nix/nix.conf left untouc
 # takes effect on the ACTIVATED system - it cannot help THIS script's own
 # network calls below (nix-prefetch-url/git clone in fetch_repo, and the nix
 # build itself fetching flake inputs), because the system generation that
-# would set it hasn't built yet. So before any of that, build an ephemeral
-# CA bundle for this process only (system default bundle + every file in the
-# given directory) and export it via the env vars Nix/git/curl actually
-# honor. Cleaned up on exit; a missing/unset directory changes nothing.
+# would set it hasn't built yet. So before any of that, build a CA bundle for
+# this script's own fetches (system default bundle + every file in the given
+# directory) at a persistent path under $HOME (not mktemp's /tmp - a
+# sandboxed nix build gets its own private, empty /tmp, so a /tmp path is not
+# reliably visible where it might be needed) and export it via the env vars
+# Nix/git/curl actually honor. Regenerated (overwritten, not appended) on
+# every run rather than trying to detect staleness; left in place afterwards
+# since it's a plain, inspectable, non-secret CA bundle - a missing/unset
+# directory changes nothing.
 if [ "$ROLE" = wsl ] && [ -n "${DOTFILES_CORPORATE_CA_DIR:-}" ]; then
-  CA_BUNDLE_TMP="$(mktemp)"
-  trap 'rm -f "$CA_BUNDLE_TMP"' EXIT
-  : > "$CA_BUNDLE_TMP"
+  mkdir -p "$(dirname "$CA_BUNDLE_FILE")"
+  : > "$CA_BUNDLE_FILE"
   for base in /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-bundle.crt /etc/pki/tls/certs/ca-bundle.crt; do
     if [ -f "$base" ]; then
-      cat "$base" >> "$CA_BUNDLE_TMP"
+      cat "$base" >> "$CA_BUNDLE_FILE"
       break
     fi
   done
   if [ -d "$DOTFILES_CORPORATE_CA_DIR" ]; then
     for f in "$DOTFILES_CORPORATE_CA_DIR"/*; do
-      [ -f "$f" ] && cat "$f" >> "$CA_BUNDLE_TMP"
+      [ -f "$f" ] && cat "$f" >> "$CA_BUNDLE_FILE"
     done
   else
     warn "DOTFILES_CORPORATE_CA_DIR ($DOTFILES_CORPORATE_CA_DIR) does not exist - proceeding with only the system default CA bundle, if any"
   fi
-  export NIX_SSL_CERT_FILE="$CA_BUNDLE_TMP"
-  export SSL_CERT_FILE="$CA_BUNDLE_TMP"
-  export GIT_SSL_CAINFO="$CA_BUNDLE_TMP"
-  info "corporate CA bundle assembled for this run's own fetches (NIX_SSL_CERT_FILE/SSL_CERT_FILE/GIT_SSL_CAINFO)"
+  export NIX_SSL_CERT_FILE="$CA_BUNDLE_FILE"
+  export SSL_CERT_FILE="$CA_BUNDLE_FILE"
+  export GIT_SSL_CAINFO="$CA_BUNDLE_FILE"
+  info "corporate CA bundle assembled at $CA_BUNDLE_FILE for this run's own fetches (NIX_SSL_CERT_FILE/SSL_CERT_FILE/GIT_SSL_CAINFO)"
+  # NIX_SSL_CERT_FILE/SSL_CERT_FILE cover fetches this script's own process
+  # makes directly (nix-prefetch-url, git clone, and flake-input evaluation
+  # inside `nix build`). They do NOT reach a multi-user nix-daemon's own
+  # fetches (substituter/binary-cache downloads, and fixed-output-derivation
+  # builds) - confirmed by hand against this repo's own nix (2.35.2): the
+  # daemon resolves its ssl-cert-file setting from ITS OWN process
+  # environment (the systemd service's, not the connecting client's), and a
+  # client-side env var never even reaches the client/daemon settings
+  # handshake. Passing --option ssl-cert-file explicitly on the build command
+  # below DOES reach the daemon and takes effect - but ONLY if this account
+  # is in nix.settings.trusted-users (NixOS default: root only); otherwise
+  # the daemon logs "ignoring the client-specified setting 'ssl-cert-file'
+  # ... you are not a trusted user" and keeps using its own default. There is
+  # no way to fix that from this unactivated-system bootstrap script itself
+  # without a separate, higher-privilege step (e.g. temporarily trusting this
+  # user, or restarting nix-daemon with the CA bundle in its own
+  # environment) - if package/binary-cache downloads during the build below
+  # still hit SSL errors after this, that daemon-side gap is almost
+  # certainly why, and closing it is a deliberate follow-up decision, not
+  # something this script does on its own.
+  BUILD_CMD+=(--option ssl-cert-file "$CA_BUNDLE_FILE")
 fi
 
 # repo_present_at <dir>: non-empty dir that looks like this repo.

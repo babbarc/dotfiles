@@ -127,11 +127,40 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   calls need CA trust before the system generation that would set the
   option has even been built (chicken-and-egg). `nix/setup.sh` covers this
   earlier moment separately: it reuses the same `DOTFILES_CORPORATE_CA_DIR`
-  to assemble an ephemeral CA bundle (system default bundle + every file in
-  the directory) into a temp file for the script's own process only, and
-  exports it via `NIX_SSL_CERT_FILE`/`SSL_CERT_FILE`/`GIT_SSL_CAINFO` before
-  `fetch_repo`/the build run. This is in addition to, not instead of, the
-  declarative option above.
+  to assemble a CA bundle (system default bundle + every file in the
+  directory) at the persistent path `~/.config/dotfiles/bootstrap-ca.crt`
+  (regenerated/overwritten on every run, not `mktemp`'s default `/tmp` - see
+  next entry for why) for the script's own process, and exports it via
+  `NIX_SSL_CERT_FILE`/`SSL_CERT_FILE`/`GIT_SSL_CAINFO` before `fetch_repo`/the
+  build run. This is in addition to, not instead of, the declarative option
+  above.
+- **`NIX_SSL_CERT_FILE`/`SSL_CERT_FILE` only cover fetches nix/setup.sh's own
+  process makes directly (nix-prefetch-url, git clone, flake-input
+  evaluation) - they never reach a multi-user nix-daemon's OWN fetches
+  (substituter/binary-cache downloads, fixed-output-derivation builds),
+  confirmed by hand against nix 2.35.2**: a sandboxed FOD build's `/tmp` is
+  private per-build, so a bundle path under `mktemp`'s `/tmp` is not reliably
+  visible where the daemon might need it - persisting it under `$HOME` (as
+  above) fixes that half. But separately, and regardless of path, the daemon
+  computes its `ssl-cert-file` setting from *its own* (systemd-service)
+  process environment, not the connecting client's - a client-exported env
+  var never reaches the daemon at all, verified with
+  `NIX_SSL_CERT_FILE=/bogus nix build --option ssl-cert-file /bogus <FOD
+  expr>`, which builds using the daemon's own default with no error. An
+  explicit `--option ssl-cert-file <path>` on the `nix build` command line
+  (which `nix/setup.sh` also passes) *does* reach the daemon's `SetOptions`
+  handshake, but the daemon only honors it when the connecting user is in
+  `nix.settings.trusted-users` (NixOS default: `root` only - the `wsl` host
+  config in this repo does not add `@wheel` or the login user); otherwise the
+  daemon logs "ignoring the client-specified setting 'ssl-cert-file' ... you
+  are not a trusted user" and silently keeps its own default. There is no
+  fix for this available to an unactivated bootstrap script itself (trusting
+  the user or giving the daemon the CA bundle both require a separate,
+  higher-privilege step, e.g. a NixOS rebuild or a `sudo systemctl
+  set-environment` + daemon restart) - if a corporate-network bootstrap still
+  hits SSL errors on package/binary-cache downloads after the CA bundle is
+  wired up, this daemon-side gap is the near-certain reason, not a mistake in
+  the client-side wiring.
 
 Portable dev tooling (shell, editor, language toolchains, git/CLI utilities,
 agent-CLI config) lives in `nix/modules/dev/` (imported as a unit via
