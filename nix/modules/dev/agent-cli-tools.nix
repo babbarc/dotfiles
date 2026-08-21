@@ -23,7 +23,7 @@
   # `command -v` guards can see tools already bootstrapped at ~/.local/bin and
   # the block truly no-ops on an already-set-up machine, as promised above),
   # then the store-pinned tool dirs the piped installers invoke by bare name
-  # (curl, plus tar for the tar.gz installers and awk for herdr's).
+  # (curl, plus tar and gzip for the tar.gz installers and awk for herdr's).
   #
   # npm-global.nix writes ~/.npmrc via home.file, but home.file content is
   # linked at "linkGeneration" - which runs AFTER these writeBoundary install
@@ -43,12 +43,12 @@
     # treehouse/install.sh needs curl and tar by bare name in the stripped
     # activation PATH (grep/sed/tr/uname are already pinned); ~/.local/bin
     # first so an already-installed treehouse is seen by the guard.
-    PATH="$HOME/.local/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:$PATH"
+    PATH="$HOME/.local/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:$PATH"
     if ! command -v treehouse >/dev/null 2>&1; then
       if [ -n "$DRY_RUN_CMD" ]; then
         echo "$DRY_RUN_CMD would install treehouse via: curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | sh"
       else
-        ${pkgs.curl}/bin/curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | PATH="${pkgs.curl}/bin:${pkgs.gnutar}/bin:$PATH" sh \
+        ${pkgs.curl}/bin/curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | PATH="${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:$PATH" sh \
           || echo "warning: treehouse install failed (offline?) - retry later with: curl -fsSL https://kunchenguid.github.io/treehouse/install.sh | sh" >&2
       fi
     fi
@@ -57,12 +57,12 @@
   home.activation.noMistakesInstall = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     # no-mistakes/install.sh needs curl and tar by bare name; ~/.local/bin
     # first so an already-installed no-mistakes is seen by the guard.
-    PATH="$HOME/.local/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:$PATH"
+    PATH="$HOME/.local/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:$PATH"
     if ! command -v no-mistakes >/dev/null 2>&1; then
       if [ -n "$DRY_RUN_CMD" ]; then
         echo "$DRY_RUN_CMD would install no-mistakes via: curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | sh"
       else
-        ${pkgs.curl}/bin/curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | PATH="${pkgs.curl}/bin:${pkgs.gnutar}/bin:$PATH" sh \
+        ${pkgs.curl}/bin/curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | PATH="${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:$PATH" sh \
           || echo "warning: no-mistakes install failed (offline?) - retry later with: curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | sh" >&2
       fi
     fi
