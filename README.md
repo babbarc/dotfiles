@@ -133,7 +133,8 @@ How each consumer reads it:
   ```
   `nix/setup.sh` writes the file for you: it asks only the keys of the
   detected role's matrix (every role gets `DOTFILES_USERNAME` +
-  `DOTFILES_HOST_ROLE`, fixed to the role; laptop additionally gets
+  `DOTFILES_USER_EMAIL` + `DOTFILES_HOST_ROLE`, fixed to the role; laptop
+  additionally gets
   `DOTFILES_SERVER_HOST`, `DOTFILES_SERVER_USER`, the three `JOY_CONSOLE_*`
   keys and `STEREO_TRANSCODE_ENDPOINT`) and drops any existing key outside
   that matrix on rewrite - the file is deterministic per role, and the script

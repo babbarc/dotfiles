@@ -39,6 +39,13 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   `nix/setup.sh` writes the file and wires the override in. wezterm parses the
   file at runtime (`wezterm/config/env.lua`), fish loads it via
   `fish/conf.d/dotfiles-env.fish`, and `.zshrc` sources it for zsh.
+  `dotfilesEnv` is passed via `extraSpecialArgs`/`specialArgs` to the whole
+  home-manager module tree, not just the top-level host files - any module
+  under `nix/modules/` can take it as a function arg directly (e.g.
+  `nix/modules/dev/git.nix` reads `dotfilesEnv.DOTFILES_USER_EMAIL`), though
+  most modules instead prefer reading an already-set option like
+  `config.home.username` when one carries the same per-machine value, to
+  avoid two paths to the same fact.
 - **wezterm config is fully self-contained in this repo** - `wezterm/`
   (`wezterm.lua`, `config/`, `utils/`, `events/`) is a complete, independent
   wezterm config with no runtime dependency on the upstream
@@ -75,8 +82,9 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   asks where to fetch the repo from (LAN Gitea tarball / GitHub mirror /
   existing checkout; nix-only via `nix-prefetch-url --unpack`, git only when
   present and chosen), prompts ONLY the role's env keys (every role:
-  `DOTFILES_USERNAME` + `DOTFILES_HOST_ROLE` fixed to the role; laptop adds its
-  server/joy-console/stereo keys; `WEZTERM_*` are Windows-side only and never
+  `DOTFILES_USERNAME` + `DOTFILES_USER_EMAIL` + `DOTFILES_HOST_ROLE` fixed to
+  the role; laptop adds its server/joy-console/stereo keys; `WEZTERM_*` are
+  Windows-side only and never
   prompted or written), writes `~/.config/dotfiles/env` with exactly those keys
   (anything else in an existing file is dropped on rewrite, mentioned in the
   summary), then builds with
