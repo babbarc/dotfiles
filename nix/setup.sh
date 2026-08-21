@@ -375,7 +375,7 @@ fi
 
 if [ "$ROLE" = wsl ]; then
   log "corporate CA (only on a corporate network with a TLS-intercepting proxy - Enter or 'skip' omits)"
-  DOTFILES_CORPORATE_CA_FILES="$(ask_skip 'Absolute path(s) to root CA cert file(s) already on this machine, comma-separated (one or more)' "$(def DOTFILES_CORPORATE_CA_FILES "")")"
+  DOTFILES_CORPORATE_CA_DIR="$(ask_skip 'Absolute path to a directory of root CA cert files already on this machine' "$(def DOTFILES_CORPORATE_CA_DIR "")")"
 fi
 
 # --- assemble the env file ----------------------------------------------------------
@@ -413,7 +413,7 @@ $(env_line STEREO_TRANSCODE_ENDPOINT "$STEREO_TRANSCODE_ENDPOINT")
 fi
 if [ "$ROLE" = wsl ]; then
   ENV_CONTENT+="# nix (wsl: optional corporate CA)
-$(env_line DOTFILES_CORPORATE_CA_FILES "$DOTFILES_CORPORATE_CA_FILES")
+$(env_line DOTFILES_CORPORATE_CA_DIR "$DOTFILES_CORPORATE_CA_DIR")
 "
 fi
 
@@ -469,16 +469,16 @@ case "$SOURCE" in
 esac
 
 BUILD_CMD=(nix build "$BUILD_FLAKE#$ATTR" --override-input dotfiles-env "path:$ENV_FILE")
-# DOTFILES_CORPORATE_CA_FILES points at arbitrary on-disk paths outside the
+# DOTFILES_CORPORATE_CA_DIR points at an arbitrary on-disk path outside the
 # flake's inputs; flakes evaluate in pure mode by default, which forbids
-# importing such paths into the store, so --impure is required only when
+# importing such a path into the store, so --impure is required only when
 # that key is actually set (confirmed by hand: a plain path string in
 # security.pki.certificateFiles fails in the sandboxed cacert build with
 # "No such file or directory" since the sandbox has no access to it, and even
 # after converting it to a real Nix path so it's imported into the store at
 # eval time, pure eval itself then refuses with "access to absolute path ...
 # is forbidden in pure evaluation mode" - only --impure resolves both).
-if [ "$ROLE" = wsl ] && [ -n "${DOTFILES_CORPORATE_CA_FILES:-}" ]; then
+if [ "$ROLE" = wsl ] && [ -n "${DOTFILES_CORPORATE_CA_DIR:-}" ]; then
   BUILD_CMD+=(--impure)
 fi
 
@@ -494,6 +494,13 @@ if [ "$DRY_RUN" -eq 1 ]; then
   echo "#   host: $HOST_LABEL"
   echo "# commands that WOULD run:"
   echo "  export NIX_CONFIG=\"experimental-features = nix-command flakes\""
+  if [ "$ROLE" = wsl ] && [ -n "${DOTFILES_CORPORATE_CA_DIR:-}" ]; then
+    echo "  # bootstrap trust for this script's own fetches (nix build/git/curl below"
+    echo "  # need it before the declarative security.pki.certificateFiles work can"
+    echo "  # ever apply - that only affects the system this script has yet to build):"
+    echo "  cat <system default CA bundle> $DOTFILES_CORPORATE_CA_DIR/* > <temp bundle>"
+    echo "  export NIX_SSL_CERT_FILE=<temp bundle> SSL_CERT_FILE=<temp bundle> GIT_SSL_CAINFO=<temp bundle>"
+  fi
   case "$SOURCE" in
     1) echo "  nix-prefetch-url --unpack --print-path \"$LAN_URL\"" ;;
     2)
@@ -551,6 +558,38 @@ log "Bootstrap"
 # and read-only - never instruct editing it; NIX_CONFIG is the supported way.
 export NIX_CONFIG="experimental-features = nix-command flakes"
 info "flakes enabled for this session (NIX_CONFIG; /etc/nix/nix.conf left untouched)"
+
+# On a corporate network, DOTFILES_CORPORATE_CA_DIR's declarative
+# security.pki.certificateFiles wiring (nix/hosts/wsl/configuration.nix) only
+# takes effect on the ACTIVATED system - it cannot help THIS script's own
+# network calls below (nix-prefetch-url/git clone in fetch_repo, and the nix
+# build itself fetching flake inputs), because the system generation that
+# would set it hasn't built yet. So before any of that, build an ephemeral
+# CA bundle for this process only (system default bundle + every file in the
+# given directory) and export it via the env vars Nix/git/curl actually
+# honor. Cleaned up on exit; a missing/unset directory changes nothing.
+if [ "$ROLE" = wsl ] && [ -n "${DOTFILES_CORPORATE_CA_DIR:-}" ]; then
+  CA_BUNDLE_TMP="$(mktemp)"
+  trap 'rm -f "$CA_BUNDLE_TMP"' EXIT
+  : > "$CA_BUNDLE_TMP"
+  for base in /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-bundle.crt /etc/pki/tls/certs/ca-bundle.crt; do
+    if [ -f "$base" ]; then
+      cat "$base" >> "$CA_BUNDLE_TMP"
+      break
+    fi
+  done
+  if [ -d "$DOTFILES_CORPORATE_CA_DIR" ]; then
+    for f in "$DOTFILES_CORPORATE_CA_DIR"/*; do
+      [ -f "$f" ] && cat "$f" >> "$CA_BUNDLE_TMP"
+    done
+  else
+    warn "DOTFILES_CORPORATE_CA_DIR ($DOTFILES_CORPORATE_CA_DIR) does not exist - proceeding with only the system default CA bundle, if any"
+  fi
+  export NIX_SSL_CERT_FILE="$CA_BUNDLE_TMP"
+  export SSL_CERT_FILE="$CA_BUNDLE_TMP"
+  export GIT_SSL_CAINFO="$CA_BUNDLE_TMP"
+  info "corporate CA bundle assembled for this run's own fetches (NIX_SSL_CERT_FILE/SSL_CERT_FILE/GIT_SSL_CAINFO)"
+fi
 
 # repo_present_at <dir>: non-empty dir that looks like this repo.
 repo_present_at() {

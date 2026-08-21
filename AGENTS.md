@@ -107,17 +107,31 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   flakes already source the whole repo and use `?dir=nix` in the URL.
 - **A NixOS option referencing arbitrary on-disk paths outside the flake's
   inputs (e.g. `security.pki.certificateFiles`, see the wsl host's
-  `DOTFILES_CORPORATE_CA_FILES`, a comma-separated list) needs two fixes, not
-  one, confirmed by hand**: (1) each path must be a real Nix `path` (e.g.
-  `/. + someString`), not a bare string - a bare string reaches the consuming
-  derivation's build phase unresolved, and that build runs sandboxed with no
-  access to paths outside the Nix store, failing with "No such file or
-  directory"; (2) even after that, flakes evaluate in pure mode by default,
-  which refuses to import an out-of-flake path into the store at all ("access
-  to absolute path ... is forbidden in pure evaluation mode") - only `nix
-  build --impure` resolves this. `nix/setup.sh` adds `--impure` to its build
-  command automatically, and only when such a key is actually set, so the
-  common/default (unset) case stays fully pure.
+  `DOTFILES_CORPORATE_CA_DIR` - a directory whose regular
+  .pem/.crt/.cer/.cert files are enumerated at eval time via
+  `builtins.readDir`) needs two fixes, not one, confirmed by hand**: (1) each
+  file path must be a real Nix `path` (e.g. `/. + someString`), not a bare
+  string - a bare string reaches the consuming derivation's build phase
+  unresolved, and that build runs sandboxed with no access to paths outside
+  the Nix store, failing with "No such file or directory"; (2) even after
+  that, flakes evaluate in pure mode by default, which refuses to import an
+  out-of-flake path into the store at all ("access to absolute path ... is
+  forbidden in pure evaluation mode") - only `nix build --impure` resolves
+  this. `nix/setup.sh` adds `--impure` to its build command automatically,
+  and only when such a key is actually set, so the common/default (unset)
+  case stays fully pure. A missing or empty directory degrades to no
+  certificates rather than a hard eval error.
+- **That declarative `security.pki.certificateFiles` wiring only protects the
+  ACTIVATED system, not `nix/setup.sh`'s own bootstrap fetches** - on a
+  corporate network, the script's `nix build`/`nix-prefetch-url`/`git clone`
+  calls need CA trust before the system generation that would set the
+  option has even been built (chicken-and-egg). `nix/setup.sh` covers this
+  earlier moment separately: it reuses the same `DOTFILES_CORPORATE_CA_DIR`
+  to assemble an ephemeral CA bundle (system default bundle + every file in
+  the directory) into a temp file for the script's own process only, and
+  exports it via `NIX_SSL_CERT_FILE`/`SSL_CERT_FILE`/`GIT_SSL_CAINFO` before
+  `fetch_repo`/the build run. This is in addition to, not instead of, the
+  declarative option above.
 
 Portable dev tooling (shell, editor, language toolchains, git/CLI utilities,
 agent-CLI config) lives in `nix/modules/dev/` (imported as a unit via

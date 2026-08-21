@@ -16,21 +16,46 @@ let
   # Per-machine username from ~/.config/dotfiles/env (see env.example); the
   # committed example/placeholder keeps eval working on a fresh clone.
   username = dotfilesEnv.DOTFILES_USERNAME or "user";
-  # Optional corporate root CAs to trust (see env.example): a comma-separated
-  # list of absolute paths to files already on disk. Empty on machines with
-  # no TLS-intercepting proxy. Each path is converted from a bare string to a
-  # real Nix path value via `/. + path` (not left as a bare string):
-  # security.pki.certificateFiles feeds cacert's build, which runs sandboxed
-  # with no access to arbitrary host paths, so each file must be imported
-  # into the Nix store at eval time (a bare string builds the CA bundle from
-  # that literal path at build time and fails with "No such file or
-  # directory" inside the sandbox - confirmed by hand). Importing an
+  # Optional directory of corporate root CAs to trust (see env.example):
+  # every regular cert file (.pem/.crt/.cer/.cert) found directly inside it
+  # is fed to security.pki.certificateFiles - however many are dropped in,
+  # no fixed count or filename expected. Empty/unset on machines with no
+  # TLS-intercepting proxy, and a missing or empty directory degrades to no
+  # certs rather than a hard eval error (a captain typo'ing the path
+  # shouldn't break the whole build). Each file path is converted from a
+  # bare string to a real Nix path value via `/. + path` (not left as a bare
+  # string): security.pki.certificateFiles feeds cacert's build, which runs
+  # sandboxed with no access to arbitrary host paths, so each file must be
+  # imported into the Nix store at eval time (a bare string builds the CA
+  # bundle from that literal path at build time and fails with "No such file
+  # or directory" inside the sandbox - confirmed by hand). Importing an
   # out-of-flake path also needs `nix build --impure` (flakes evaluate pure
   # by default, which otherwise refuses the path outright) - nix/setup.sh
-  # adds that flag automatically, only when this key is set.
-  certFileStrs = builtins.filter (s: s != "") (map lib.strings.trim
-    (lib.splitString "," (dotfilesEnv.DOTFILES_CORPORATE_CA_FILES or "")));
-  certFiles = map (s: /. + s) certFileStrs;
+  # adds that flag automatically, only when this key is set. This is only
+  # the DECLARATIVE side, trusted by the activated system going forward
+  # (e.g. lazy.nvim's later clone) - it cannot help nix/setup.sh's OWN
+  # fetches of this flake's inputs, since those happen before this system
+  # generation exists; setup.sh handles that earlier moment separately with
+  # an ephemeral NIX_SSL_CERT_FILE/SSL_CERT_FILE export (see its comments).
+  certDirStr = dotfilesEnv.DOTFILES_CORPORATE_CA_DIR or "";
+  certExtensions = [ ".pem" ".crt" ".cer" ".cert" ];
+  certFiles =
+    if certDirStr == "" then
+      [ ]
+    else
+      let
+        certDirPath = /. + certDirStr;
+      in
+      if !(builtins.pathExists certDirPath) then
+        [ ]
+      else
+        let
+          entries = builtins.readDir certDirPath;
+          isCertFile = name: type:
+            type == "regular" && lib.any (ext: lib.hasSuffix ext name) certExtensions;
+          certNames = builtins.attrNames (lib.filterAttrs isCertFile entries);
+        in
+        map (name: certDirPath + "/${name}") certNames;
 in
 {
   imports = [
