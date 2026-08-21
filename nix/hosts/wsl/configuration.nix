@@ -72,6 +72,43 @@ in
   # session's NIX_CONFIG export goes away.
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
+  # SECURITY-SENSITIVE: grants this login user "trusted" status with the
+  # nix-daemon (in addition to nixpkgs' own default of `[ "root" ]`, which
+  # this list ADDS to rather than replaces - `nix.settings.trusted-users` is
+  # a listOf-typed option, and NixOS's module system concatenates multiple
+  # plain-priority definitions of a list option instead of the last one
+  # winning, confirmed by reading nixpkgs' nixos/modules/config/nix.nix,
+  # which sets its `[ "root" ]` default the same way, not via mkDefault).
+  # A trusted user can pass arbitrary extra nix.conf settings to the daemon
+  # (e.g. --option substituters/ssl-cert-file) AND submit pre-built,
+  # unsandboxed store paths the daemon will accept without rebuilding them -
+  # i.e. this is effectively root-equivalent access to the nix store, a
+  # standard and well-known nix privilege grant, not a cosmetic setting.
+  # This is deliberate here: it is what lets nix/setup.sh's
+  # `--option ssl-cert-file <path>` (see the DOTFILES_CORPORATE_CA_DIR
+  # comment above) actually take effect on a corporate network, since the
+  # daemon otherwise silently ignores a client-specified option from an
+  # untrusted user (confirmed by hand against nix 2.35.2).
+  #
+  # Deliberately the named user, not `@wheel`: nixos-wsl's own
+  # `wsl.defaultUser` module (nixos-wsl's modules/wsl-distro.nix) already
+  # puts this user in `wheel` unconditionally, for sudo, not as a
+  # nix-trust decision - piggybacking on that would trust anyone else later
+  # added to wheel for sudo-only reasons. On this single-user personal
+  # machine, naming the user directly keeps the grant scoped to an explicit
+  # decision instead of an incidental group membership.
+  #
+  # Bootstrap sequencing: this is a DECLARATIVE setting, so - like
+  # security.pki.certificateFiles above - it only takes effect after a
+  # successful activation. It does nothing for the very first bootstrap on
+  # a fresh corporate-network machine (nix/setup.sh's own process, run as
+  # the login user, is not yet trusted at that point). The captain's
+  # workaround for that one-time first run is `sudo nix/setup.sh`, since
+  # root is trusted by default; this setting is what makes every
+  # subsequent run (updates, re-provisioning) work without sudo once the
+  # first activation has succeeded.
+  nix.settings.trusted-users = [ username ];
+
   # nixos-wsl's defaultUser account creation (isNormalUser/uid/extraGroups)
   # does not set a shell, so this is the only place the login shell is
   # decided - without it, opening a WSL2 terminal lands in bash even though

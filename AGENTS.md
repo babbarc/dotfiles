@@ -150,17 +150,32 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   explicit `--option ssl-cert-file <path>` on the `nix build` command line
   (which `nix/setup.sh` also passes) *does* reach the daemon's `SetOptions`
   handshake, but the daemon only honors it when the connecting user is in
-  `nix.settings.trusted-users` (NixOS default: `root` only - the `wsl` host
-  config in this repo does not add `@wheel` or the login user); otherwise the
-  daemon logs "ignoring the client-specified setting 'ssl-cert-file' ... you
-  are not a trusted user" and silently keeps its own default. There is no
-  fix for this available to an unactivated bootstrap script itself (trusting
-  the user or giving the daemon the CA bundle both require a separate,
-  higher-privilege step, e.g. a NixOS rebuild or a `sudo systemctl
-  set-environment` + daemon restart) - if a corporate-network bootstrap still
-  hits SSL errors on package/binary-cache downloads after the CA bundle is
-  wired up, this daemon-side gap is the near-certain reason, not a mistake in
-  the client-side wiring.
+  `nix.settings.trusted-users`. `nix/hosts/wsl/configuration.nix` now
+  declares the login user trusted there (see its `nix.settings.trusted-users`
+  comment for the security tradeoff and why it's the named user, not
+  `@wheel`, even though nixos-wsl's own `wsl.defaultUser` module already puts
+  that user in `wheel` for sudo) - but this is DECLARATIVE and so only takes
+  effect after a generation built with it has been activated once; it cannot
+  help `nix/setup.sh`'s very first bootstrap run on a fresh machine
+  (chicken-and-egg, same as everything else in this list). Until that first
+  activation, or on any host that hasn't added this setting, the daemon logs
+  "ignoring the client-specified setting 'ssl-cert-file' ... you are not a
+  trusted user" and silently keeps its own default - the workaround for that
+  one-time first run is `sudo nix/setup.sh` (root is trusted by default). If
+  a corporate-network bootstrap still hits SSL errors on package/binary-cache
+  downloads after the CA bundle is wired up and this is genuinely the first
+  run, this daemon-side gap is the near-certain reason, not a mistake in the
+  client-side wiring.
+- **`nix.settings.trusted-users` is a `listOf`-typed NixOS option, so a plain
+  assignment in a host config file ADDS to nixpkgs' own default of
+  `[ "root" ]` rather than replacing it** - confirmed by reading
+  `nixos/modules/config/nix.nix` (the default is set as a plain
+  `trusted-users = [ "root" ]`, not via `mkDefault`, so it merges with any
+  other plain-priority definition of the same list option) and by `nix eval
+  ./nix#nixosConfigurations.wsl.config.nix.settings.trusted-users`, which
+  returns both `"root"` and the configured login user. No need to spell out
+  `"root"` explicitly alongside the login user in a host config - it's
+  already there by default and doesn't need re-adding.
 
 Portable dev tooling (shell, editor, language toolchains, git/CLI utilities,
 agent-CLI config) lives in `nix/modules/dev/` (imported as a unit via

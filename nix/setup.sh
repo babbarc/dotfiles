@@ -620,14 +620,18 @@ if [ "$ROLE" = wsl ] && [ -n "${DOTFILES_CORPORATE_CA_DIR:-}" ]; then
   # below DOES reach the daemon and takes effect - but ONLY if this account
   # is in nix.settings.trusted-users (NixOS default: root only); otherwise
   # the daemon logs "ignoring the client-specified setting 'ssl-cert-file'
-  # ... you are not a trusted user" and keeps using its own default. There is
-  # no way to fix that from this unactivated-system bootstrap script itself
-  # without a separate, higher-privilege step (e.g. temporarily trusting this
-  # user, or restarting nix-daemon with the CA bundle in its own
-  # environment) - if package/binary-cache downloads during the build below
-  # still hit SSL errors after this, that daemon-side gap is almost
-  # certainly why, and closing it is a deliberate follow-up decision, not
-  # something this script does on its own.
+  # ... you are not a trusted user" and keeps using its own default.
+  #
+  # nix/hosts/wsl/configuration.nix now declares this login user as a
+  # trusted user (see its nix.settings.trusted-users comment for the
+  # security tradeoff), so this stops being a problem from the SECOND
+  # activation onward. It cannot help the very first run on a fresh
+  # corporate-network machine, though: that declarative setting only takes
+  # effect once a generation built with it has been activated, and this
+  # script's own process is what builds/activates that first generation -
+  # chicken-and-egg. For that one-time first run, invoke this script with
+  # `sudo` (root is trusted by default) if package/binary-cache downloads
+  # during the build below hit SSL errors.
   BUILD_CMD+=(--option ssl-cert-file "$CA_BUNDLE_FILE")
 fi
 
