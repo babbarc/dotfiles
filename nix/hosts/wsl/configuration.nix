@@ -120,6 +120,15 @@ in
   programs.fish.enable = true;
   users.users.${username}.shell = pkgs.fish;
 
+  # curl-installed generic Linux binaries (treehouse, no-mistakes, herdr - see
+  # nix/modules/dev/agent-cli-tools.nix and nix/modules/dev/herdr.nix, none
+  # built through Nix) fail to run on NixOS: there is no
+  # /lib64/ld-linux-x86-64.so.2 at the path a normal Linux binary expects,
+  # since NixOS is not an FHS distro. The Arch laptop host never hits this
+  # (Arch is a normal FHS distro); nix-ld provides that dynamic-linker shim
+  # so these binaries execute unmodified.
+  programs.nix-ld.enable = true;
+
   # Matches nix/flake.nix's allowUnfreePredicate for the Arch host's own pkgs
   # instance (unrar, pulled in by modules/dev/cli-tools.nix) - this host has
   # no custom `pkgs` passed to nixosSystem, so the same exception has to be
