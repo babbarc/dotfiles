@@ -105,19 +105,19 @@ output names role-based (`laptop`, `server`, `wsl`) not username-based:
   `~/.dotfiles?dir=nix#...`). A RELATIVE git ref like `./nix#...` from inside
   the repo is fine (git-flake semantics use the whole git tree). Tarball/git-URL
   flakes already source the whole repo and use `?dir=nix` in the URL.
-- **A NixOS option referencing an arbitrary on-disk path outside the flake's
+- **A NixOS option referencing arbitrary on-disk paths outside the flake's
   inputs (e.g. `security.pki.certificateFiles`, see the wsl host's
-  `DOTFILES_CORPORATE_CA_FILE`) needs two fixes, not one, confirmed by hand**:
-  (1) the value must be a real Nix `path` (e.g. `/. + someString`), not a bare
-  string - a bare string reaches the consuming derivation's build phase
-  unresolved, and that build runs sandboxed with no access to paths outside
-  the Nix store, failing with "No such file or directory"; (2) even after
-  that, flakes evaluate in pure mode by default, which refuses to import an
-  out-of-flake path into the store at all ("access to absolute path ... is
-  forbidden in pure evaluation mode") - only `nix build --impure` resolves
-  this. `nix/setup.sh` adds `--impure` to its build command automatically,
-  and only when such a key is actually set, so the common/default (unset)
-  case stays fully pure.
+  `DOTFILES_CORPORATE_CA_FILES`, a comma-separated list) needs two fixes, not
+  one, confirmed by hand**: (1) each path must be a real Nix `path` (e.g.
+  `/. + someString`), not a bare string - a bare string reaches the consuming
+  derivation's build phase unresolved, and that build runs sandboxed with no
+  access to paths outside the Nix store, failing with "No such file or
+  directory"; (2) even after that, flakes evaluate in pure mode by default,
+  which refuses to import an out-of-flake path into the store at all ("access
+  to absolute path ... is forbidden in pure evaluation mode") - only `nix
+  build --impure` resolves this. `nix/setup.sh` adds `--impure` to its build
+  command automatically, and only when such a key is actually set, so the
+  common/default (unset) case stays fully pure.
 
 Portable dev tooling (shell, editor, language toolchains, git/CLI utilities,
 agent-CLI config) lives in `nix/modules/dev/` (imported as a unit via

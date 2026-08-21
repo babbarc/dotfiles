@@ -375,7 +375,7 @@ fi
 
 if [ "$ROLE" = wsl ]; then
   log "corporate CA (only on a corporate network with a TLS-intercepting proxy - Enter or 'skip' omits)"
-  DOTFILES_CORPORATE_CA_FILE="$(ask_skip 'Absolute path to a root CA cert file already on this machine' "$(def DOTFILES_CORPORATE_CA_FILE "")")"
+  DOTFILES_CORPORATE_CA_FILES="$(ask_skip 'Absolute path(s) to root CA cert file(s) already on this machine, comma-separated (one or more)' "$(def DOTFILES_CORPORATE_CA_FILES "")")"
 fi
 
 # --- assemble the env file ----------------------------------------------------------
@@ -413,7 +413,7 @@ $(env_line STEREO_TRANSCODE_ENDPOINT "$STEREO_TRANSCODE_ENDPOINT")
 fi
 if [ "$ROLE" = wsl ]; then
   ENV_CONTENT+="# nix (wsl: optional corporate CA)
-$(env_line DOTFILES_CORPORATE_CA_FILE "$DOTFILES_CORPORATE_CA_FILE")
+$(env_line DOTFILES_CORPORATE_CA_FILES "$DOTFILES_CORPORATE_CA_FILES")
 "
 fi
 
@@ -469,16 +469,16 @@ case "$SOURCE" in
 esac
 
 BUILD_CMD=(nix build "$BUILD_FLAKE#$ATTR" --override-input dotfiles-env "path:$ENV_FILE")
-# DOTFILES_CORPORATE_CA_FILE points at an arbitrary on-disk path outside the
+# DOTFILES_CORPORATE_CA_FILES points at arbitrary on-disk paths outside the
 # flake's inputs; flakes evaluate in pure mode by default, which forbids
-# importing such a path into the store, so --impure is required only when
+# importing such paths into the store, so --impure is required only when
 # that key is actually set (confirmed by hand: a plain path string in
 # security.pki.certificateFiles fails in the sandboxed cacert build with
 # "No such file or directory" since the sandbox has no access to it, and even
 # after converting it to a real Nix path so it's imported into the store at
 # eval time, pure eval itself then refuses with "access to absolute path ...
 # is forbidden in pure evaluation mode" - only --impure resolves both).
-if [ "$ROLE" = wsl ] && [ -n "${DOTFILES_CORPORATE_CA_FILE:-}" ]; then
+if [ "$ROLE" = wsl ] && [ -n "${DOTFILES_CORPORATE_CA_FILES:-}" ]; then
   BUILD_CMD+=(--impure)
 fi
 
