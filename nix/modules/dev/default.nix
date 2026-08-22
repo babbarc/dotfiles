@@ -12,6 +12,7 @@
     ./nvim.nix
     ./lazygit.nix
     ./firstmate.nix
+    ./browser-proxy-firstmate.nix
     ./npm-global.nix
     ./agent-cli-tools.nix
     ./herdr.nix

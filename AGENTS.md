@@ -211,6 +211,22 @@ Nix.
   absolute `~/.config/...` path - that breaks once home-manager replaces them with
   read-only Nix-store symlinks (wezterm.nix's header comment documents a real instance
   of this class of problem).
+- **Podman quadlets** (systemd units describing rootless containers) are vendored the
+  same way: `nix/modules/dev/browser-proxy-firstmate.nix` copies a `.container` file
+  from `containers/systemd/` in this repo to `~/.config/containers/systemd/` via
+  `xdg.configFile` - confirmed on this host (podman 6.1.0) as the directory podman's
+  user-level quadlet generator actually reads to produce a systemd --user unit; don't
+  assume that path without checking it holds on whatever nixpkgs/podman version is
+  current. This repo does NOT install podman itself (no package declares it anywhere
+  under `nix/` - it's a system package outside home-manager's scope on this host) and
+  does NOT script building the container images quadlets depend on (`podman build
+  -f Containerfile...` stays a manual, occasional step by design - never add a nix
+  activation script that runs a podman build). The captain's separate *production*
+  browser-proxy instance (hermes-agent repo, `browser-proxy.container`, ports
+  3333/3334) is NOT managed by this repo at all - it runs under a distinct system
+  user account on this host, set up by hand entirely outside of nix; don't assume its
+  existence implies a pattern to extend here beyond what `browser-proxy-firstmate.nix`
+  already establishes.
 - `herdr/config.toml` is templated, not `.source`-linked: it carries a
   `__FISH_SHELL_PATH__` placeholder for `default_shell` that `nix/modules/dev/herdr.nix`
   substitutes with `$HOME/.nix-profile/bin/fish` (home-manager-path installs into the
