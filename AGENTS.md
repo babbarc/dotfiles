@@ -226,7 +226,13 @@ Nix.
   3333/3334) is NOT managed by this repo at all - it runs under a distinct system
   user account on this host, set up by hand entirely outside of nix; don't assume its
   existence implies a pattern to extend here beyond what `browser-proxy-firstmate.nix`
-  already establishes.
+  already establishes. A quadlet's own dependencies (e.g. a script it bind-mounts via
+  `Volume=`) get vendored the same way rather than requiring a live clone of their
+  source repo on this host: `browser-proxy-firstmate.py` is a synced copy of
+  hermes-agent's `browser-proxy.py`, materialized alongside the quadlet unit at
+  `~/.config/containers/systemd/browser-proxy-firstmate.py`, with the quadlet's
+  `Volume=` line pointing at that materialized path instead of a path under
+  `~/hermes-agent`. Keep both copies in sync by hand if hermes-agent's script changes.
 - `herdr/config.toml` is templated, not `.source`-linked: it carries a
   `__FISH_SHELL_PATH__` placeholder for `default_shell` that `nix/modules/dev/herdr.nix`
   substitutes with `$HOME/.nix-profile/bin/fish` (home-manager-path installs into the

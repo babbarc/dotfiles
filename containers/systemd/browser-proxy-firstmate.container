@@ -20,8 +20,9 @@ Network=host
 Volume=/etc/localtime:/etc/localtime:ro
 Volume=%t/podman/podman.sock:/run/podman/podman.sock:Z
 
-# Mount the proxy script (%h = $HOME)
-Volume=%h/hermes-agent/browser-proxy.py:/proxy.py:ro,Z
+# Mount the proxy script (vendored copy under this repo's home-manager
+# config, materialized via xdg.configFile - see browser-proxy-firstmate.nix)
+Volume=%h/.config/containers/systemd/browser-proxy-firstmate.py:/proxy.py:ro,Z
 
 # Tell podman CLI where the socket is
 Environment=CONTAINER_HOST=unix:///run/podman/podman.sock

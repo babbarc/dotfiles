@@ -29,6 +29,18 @@
   # Building the container image (`podman build -f Containerfile.browser
   # ...`) that this quadlet depends on stays a manual, occasional step —
   # deliberately not scripted here.
+  #
+  # The quadlet's Volume= line bind-mounts the proxy script itself
+  # (browser-proxy.py, from the captain's hermes-agent repo) into the
+  # container. Rather than requiring a full live clone of hermes-agent on
+  # this host just to supply that one file, a synced copy of the script is
+  # vendored into this repo (same pattern as herdr/config.toml and the
+  # quadlet unit above) and materialized alongside the quadlet unit at
+  # ~/.config/containers/systemd/browser-proxy-firstmate.py. The quadlet's
+  # Volume= line points at that materialized path instead of
+  # ~/hermes-agent/browser-proxy.py.
   xdg.configFile."containers/systemd/browser-proxy-firstmate.container".source =
     ../../../containers/systemd/browser-proxy-firstmate.container;
+  xdg.configFile."containers/systemd/browser-proxy-firstmate.py".source =
+    ../../../containers/systemd/browser-proxy-firstmate.py;
 }
