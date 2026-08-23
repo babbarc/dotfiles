@@ -1,0 +1,11 @@
+{{/* Gate desktop-only dotfiles out of server/wsl, mirroring this repo's own
+     current per-host nix `imports` split (laptop's home.nix imports
+     wezterm.nix/sway.nix/waybar.nix; server's and wsl's home.nix only
+     import modules/dev) rather than inventing a second host-conditional
+     mechanism. DOTFILES_HOST_ROLE comes from the same env-ingestion as
+     every other per-machine value (.chezmoi.toml.tmpl). */ -}}
+{{- if ne .DOTFILES_HOST_ROLE "laptop" }}
+.config/wezterm
+.config/sway
+.config/waybar
+{{- end }}

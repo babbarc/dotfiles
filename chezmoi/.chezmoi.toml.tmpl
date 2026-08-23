@@ -1,0 +1,26 @@
+{{/* Ingest ~/.config/dotfiles/env (the single per-machine-values file also
+     read by nix, wezterm, fish, and zsh - see env.example) into chezmoi's
+     own [data] table, so templates here can read e.g. .DOTFILES_USER_EMAIL
+     without duplicating those values into a second, chezmoi-only prompt
+     flow. KEY=VALUE lines, "#" starts a whole-line comment, same format
+     env.example documents. Missing file (e.g. a fresh scratch destination
+     with no env written yet) degrades to an empty data set rather than a
+     hard template error. */ -}}
+{{- $envPath := joinPath .chezmoi.homeDir ".config/dotfiles/env" -}}
+{{- $data := dict -}}
+{{- if stat $envPath -}}
+{{- $raw := output "cat" $envPath -}}
+{{- range splitList "\n" $raw -}}
+{{- $line := trim . -}}
+{{- if and (ne $line "") (not (hasPrefix "#" $line)) -}}
+{{- if contains "=" $line -}}
+{{- $parts := splitn "=" 2 $line -}}
+{{- $_ := set $data (trim $parts._0) (trim $parts._1) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end }}
+[data]
+{{- range $k, $v := $data }}
+{{ $k }} = {{ $v | quote }}
+{{- end }}

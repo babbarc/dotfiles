@@ -1,0 +1,25 @@
+#!/bin/sh
+# Reimplements nix/modules/dev/pi.nix's piSettings activation script as a
+# chezmoi modify_ script: settings.json mixes genuinely-user fields (theme,
+# hideThinkingBlock, steeringMode, followUpMode) with fields pi itself writes
+# at runtime (defaultProvider/defaultModel, lastChangelogVersion). chezmoi
+# feeds the existing target content on stdin (empty if the file doesn't
+# exist yet) and expects the new content on stdout - same merge direction as
+# the original `jq -s '.[0] * .[1]' "$settings_file" defaults.json`: existing
+# on the left, managed defaults on the right, so defaults win on overlapping
+# keys and every pi-written field neither side shares survives untouched.
+set -eu
+
+defaults='{
+  "theme": "rose-pine-moon",
+  "hideThinkingBlock": true,
+  "steeringMode": "all",
+  "followUpMode": "all"
+}'
+
+existing="$(cat)"
+if [ -z "$existing" ]; then
+  existing='{}'
+fi
+
+printf '%s' "$existing" | jq --argjson defaults "$defaults" '. * $defaults'

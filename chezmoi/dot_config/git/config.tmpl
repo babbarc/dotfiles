@@ -1,0 +1,11 @@
+{{/* Mirrors nix/modules/dev/git.nix's programs.git.settings.user: name comes
+     from DOTFILES_USERNAME (the same per-machine value every host's
+     home.username is set from - see git.nix's own comment for why it reuses
+     that value rather than a separate config key), email from
+     DOTFILES_USER_EMAIL, omitted entirely when unset rather than emitting a
+     blank email. Both come from the .chezmoi.toml.tmpl env-ingestion above. */ -}}
+[user]
+	name = {{ .DOTFILES_USERNAME | default .chezmoi.username }}
+{{- if .DOTFILES_USER_EMAIL }}
+	email = {{ .DOTFILES_USER_EMAIL }}
+{{- end }}

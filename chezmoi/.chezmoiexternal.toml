@@ -1,0 +1,39 @@
+# Chezmoi-managed mirrors of this repo's 5 git submodules (.gitmodules).
+# Additive/parallel for now, per the phase 2 migration plan (report §7 step
+# 6) - the submodules and .gitmodules entries stay untouched, and the actual
+# cutover away from submodules to these externals is later, separate work.
+# refreshPeriod = "168h" (1 week) matches the syntax the migration report
+# confirmed against chezmoi's current docs; `chezmoi update --refresh-externals`
+# forces an earlier refetch. Target paths mirror the current submodule paths
+# (relative to the destination root here, vs. relative to the repo root
+# today) - no rename decision was made as part of this task.
+
+[".tmux"]
+    type = "git-repo"
+    url = "https://github.com/gpakosz/.tmux.git"
+    refreshPeriod = "168h"
+    clone.args = ["--depth", "1"]
+
+["fzf-git.sh"]
+    type = "git-repo"
+    url = "https://github.com/junegunn/fzf-git.sh.git"
+    refreshPeriod = "168h"
+    clone.args = ["--depth", "1"]
+
+["passfzf"]
+    type = "git-repo"
+    url = "https://git.sr.ht/~mlaparie/passfzf"
+    refreshPeriod = "168h"
+    clone.args = ["--depth", "1"]
+
+["alacritty/catppuccin"]
+    type = "git-repo"
+    url = "https://github.com/catppuccin/alacritty.git"
+    refreshPeriod = "168h"
+    clone.args = ["--depth", "1"]
+
+["ohmyzsh"]
+    type = "git-repo"
+    url = "https://github.com/ohmyzsh/ohmyzsh.git"
+    refreshPeriod = "168h"
+    clone.args = ["--depth", "1"]
