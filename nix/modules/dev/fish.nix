@@ -45,20 +45,4 @@
   xdg.configFile."fish/conf.d/nix-path.fish".text = ''
     fish_add_path --prepend --global "$HOME/.nix-profile/bin" /nix/var/nix/profiles/default/bin "$HOME/.local/bin"
   '';
-
-  xdg.configFile = {
-    "fish/functions/fisher.fish".source = "${fisher}/functions/fisher.fish";
-    "fish/completions/fisher.fish".source = "${fisher}/completions/fisher.fish";
-    "fish/conf.d/dotfiles-env.fish".source = ../../../fish/conf.d/dotfiles-env.fish;
-    "fish/conf.d/fish_frozen_theme.fish".source = ../../../fish/conf.d/fish_frozen_theme.fish;
-    "fish/conf.d/fish_frozen_key_bindings.fish".source = ../../../fish/conf.d/fish_frozen_key_bindings.fish;
-    "fish/functions/fish_greeting.fish".source = ../../../fish/functions/fish_greeting.fish;
-    "fish/functions/joy-console.fish".source = ../../../fish/functions/joy-console.fish;
-    "fish/functions/rgf.fish".source = ../../../fish/functions/rgf.fish;
-    "fish/functions/s.fish".source = ../../../fish/functions/s.fish;
-    "fish/themes" = {
-      source = ../../../fish/themes;
-      recursive = true;
-    };
-  };
 }
