@@ -323,7 +323,12 @@ sync by hand until a later, separate cutover phase removes the nix side.
   with `HOME` also pointed at a scratch dir holding a fake
   `.config/dotfiles/env` (`chezmoi init` first, to regenerate the config from
   `.chezmoi.toml.tmpl`) - see this phase's git history for the exact commands
-  used.
+  used. This is not the only way chezmoi ever gets invoked, though:
+  `nix/setup.sh` now runs `chezmoi init`/`apply` against the real checkout
+  automatically as the last step of a fresh bootstrap, right after nix
+  activation succeeds (deliberately a separate scripted step, not wired into
+  nix activation itself, to keep nix and chezmoi decoupled) - a failure there
+  only warns, it doesn't fail the whole script.
 
 ## Maintaining this file
 

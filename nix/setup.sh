@@ -561,6 +561,8 @@ if [ "$DRY_RUN" -eq 1 ]; then
   esac
   echo "  retry ${BUILD_CMD[*]}"
   echo "  ${ACTIVATE[*]}"
+  echo "  nix run nixpkgs#chezmoi -- --source \"$UPDATE_REPO\" init"
+  echo "  nix run nixpkgs#chezmoi -- --source \"$UPDATE_REPO\" apply"
   echo "# dry-run complete."
   exit 0
 fi
@@ -764,6 +766,16 @@ log "Activate"
 info "running: ${ACTIVATE[*]}"
 "${ACTIVATE[@]}"
 
+log "chezmoi"
+info "applying the chezmoi-managed dotfiles from $UPDATE_REPO"
+if nix run nixpkgs#chezmoi -- --source "$UPDATE_REPO" init &&
+  nix run nixpkgs#chezmoi -- --source "$UPDATE_REPO" apply; then
+  info "chezmoi apply complete"
+else
+  warn "chezmoi init/apply failed - nix activation above still succeeded. Retry with:"
+  warn "  nix run nixpkgs#chezmoi -- --source $UPDATE_REPO init && nix run nixpkgs#chezmoi -- --source $UPDATE_REPO apply"
+fi
+
 # --- summary -----------------------------------------------------------------------------------------
 
 log "Done"
@@ -792,6 +804,7 @@ case "$ROLE" in
     fi
     ;;
 esac
+echo "  nix run nixpkgs#chezmoi -- --source $UPDATE_REPO apply"
 echo "  (or just re-run $UPDATE_REPO/nix/setup.sh - it re-detects everything)"
 echo
 echo "SSH/GPG keys and other credentials are per-machine and NOT managed by this"
