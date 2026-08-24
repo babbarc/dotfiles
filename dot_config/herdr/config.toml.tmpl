@@ -266,7 +266,9 @@ agent_panel_sort = "spaces"
 # herdr = show in-app toasts
 # terminal = ask the outer terminal to show a desktop notification
 # system = ask the OS notification service directly
-delivery = "terminal"
+# Host-role-driven: server has no outer-terminal desktop notifications to ask
+# for, so it uses in-app toasts; laptop and wsl have a real outer terminal.
+delivery = "{{ if eq .DOTFILES_HOST_ROLE "server" }}herdr{{ else }}terminal{{ end }}"
 # delay_seconds = 1
 
 [ui.toast.herdr]
