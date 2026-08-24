@@ -1,6 +1,0 @@
-# Raise the directory-scan timeout. The default (30ms) is too short for slow
-# mounts like WSL's /mnt/c (the Windows filesystem), which made starship print
-# "Scanning current directory timed out" and break the git module's repo
-# detection on every prompt there. 200ms is enough for those mounts while
-# staying snappy on fast directories.
-scan_timeout = 200
