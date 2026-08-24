@@ -62,6 +62,14 @@ return {
    -- color scheme
    color_scheme = 'rose-pine-moon',
 
+   -- selection colors overridden to match herdr's Catppuccin Mocha
+   -- selection (herdr is the source of truth): background = Surface2
+   -- (#585b70), foreground = Text (#cdd6f4).
+   colors = {
+      selection_fg = '#cdd6f4',
+      selection_bg = '#585b70',
+   },
+
    -- scrollbar
    enable_scroll_bar = false,
 
