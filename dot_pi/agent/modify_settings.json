@@ -1,5 +1,6 @@
 #!/bin/sh
-# Reimplements nix/modules/dev/pi.nix's piSettings activation script as a
+# Reimplements the sibling nix-config repo's modules/dev/pi.nix's
+# piSettings activation script as a
 # chezmoi modify_ script: settings.json mixes genuinely-user fields (theme,
 # hideThinkingBlock, steeringMode, followUpMode) with fields pi itself writes
 # at runtime (defaultProvider/defaultModel, lastChangelogVersion). chezmoi

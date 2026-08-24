@@ -26,7 +26,7 @@ set -u
 
 TMP_ROOT=$(dotfiles_test_tmproot pi-calm)
 CALM_DIR="$ROOT/pi/extensions/calm"
-PI_NIX="$ROOT/chezmoi/dot_pi/agent/symlink_extensions.tmpl"
+PI_NIX="$ROOT/dot_pi/agent/symlink_extensions.tmpl"
 PI_PACKAGE_DIR=${PI_CALM_TEST_PACKAGE_DIR:-"$(npm root -g 2>/dev/null)/@earendil-works/pi-coding-agent"}
 TMUX_SOCKET="pi-calm-test-$$"
 TMUX_SESSION="pi-calm-e2e"
@@ -117,7 +117,8 @@ test_zero_coupling_and_state_file() {
   done
   # The upstream project name may appear only in a license attribution. The
   # README is deliberately not scanned here: it documents the firstmate TOOL
-  # install (nix/modules/dev/firstmate.nix) and its Calm attribution is the
+  # install (the sibling nix-config repo's modules/dev/firstmate.nix) and
+  # its Calm attribution is the
   # "Adapted from ..." line, which is excluded below - the forbidden-
   # identifiers scan above already covers the README for operational markers.
   local attribution_name="First""mate"

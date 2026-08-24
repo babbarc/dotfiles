@@ -88,7 +88,6 @@ behavior is pinned by `tests/pi-calm.test.sh`.
   and `dot_config/wezterm/events/` vendor the still-useful parts of the
   `KevinSilvester/wezterm-config` framework this config started from
   (MIT-licensed, attribution headers in each file).
-- **lazygit state** - `state.yml` is runtime state and stays gitignored.
 
 ## Per-machine values (`~/.config/dotfiles/env`)
 

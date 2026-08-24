@@ -18,8 +18,9 @@ if platform.is_win then
    options.wsl_domains = {
       {
          name = 'wsl:nixos',
-         -- This repo's nix/hosts/wsl/configuration.nix sets no custom WSL
-         -- distro/hostname, so this is NixOS-WSL's default registration name.
+         -- The sibling nix-config repo's hosts/wsl/configuration.nix sets no
+         -- custom WSL distro/hostname, so this is NixOS-WSL's default
+         -- registration name.
          -- If `wsl -l` on the actual machine shows something else, fix this.
          distribution = 'NixOS',
          username = env.get('WEZTERM_WSL_SYSTEM_USER', 'user'),
@@ -29,8 +30,8 @@ if platform.is_win then
          -- doesn't include this NixOS-WSL host's fish (a system-profile
          -- symlink, not on a bare PATH). Omitting it lets wsl.exe use its
          -- normal default-entry launch, which correctly resolves the user's
-         -- configured login shell (fish, set in
-         -- nix/hosts/wsl/configuration.nix). Confirmed on the real machine:
+         -- configured login shell (fish, set in nix-config's
+         -- hosts/wsl/configuration.nix). Confirmed on the real machine:
          -- `wsl.exe --distribution NixOS --cd ... --user ... --exec fish -l`
          -- fails with execvpe ENOENT; the same command without --exec works.
       },

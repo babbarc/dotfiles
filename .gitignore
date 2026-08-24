@@ -1,4 +1,3 @@
-lazygit/state.yml
 # Per-machine env file (copy env.example to ~/.config/dotfiles/env per machine;
 # never commit it - it carries machine-specific personal values)
 env

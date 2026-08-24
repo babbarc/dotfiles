@@ -25,7 +25,8 @@ script only downloads files over HTTPS). ASCII-only on purpose (no encoding
 surprises on any Windows codepage).
 
 .NOTES
-Mirrors what nix/setup.sh does per role, but for the Windows machine: this
+Mirrors what the sibling nix-config repo's setup.sh does per role, but for
+the Windows machine: this
 repo's public mirror is the source of the config, so no dotfiles checkout is
 needed on the Windows box. DOTFILES_SERVER_*/JOY_CONSOLE_*/STEREO_* keys are
 not needed on Windows and are never written.
@@ -279,7 +280,7 @@ if ($Defs.Count -gt 0) {
 }
 
 # Keys outside the Windows set are dropped on rewrite, so the file stays
-# deterministic (the nix/setup.sh per-role writer does the same).
+# deterministic (nix-config's setup.sh per-role writer does the same).
 
 $WinUser = $env:USERNAME
 if (-not $WinUser) { $WinUser = 'user' }
