@@ -27,23 +27,3 @@ AGENTS.md
 CLAUDE.md
 LICENSE
 env.example
-
-{{/* alacritty/catppuccin is the one repo-root path that is BOTH a real git
-     submodule gitlink (`git ls-tree` confirms it's the only one of the 5
-     .gitmodules entries actually present as a tree gitlink - the other 4
-     have no gitlink and so never exist as a directory before `git submodule
-     update --init`) and a chezmoi external of the same target name
-     (.chezmoiexternal.toml). Left unignored, chezmoi's source-state scan
-     finds the literal (possibly still-uninitialized, empty) submodule
-     directory and collides with its own external declaration for the exact
-     same path - the "inconsistent state" failure mode .chezmoiroot's own
-     header comment documents having been hit once already. Ignoring just
-     "alacritty" (not "alacritty/catppuccin") fixes the collision without
-     suppressing the external itself - confirmed by hand: with this ignored,
-     `chezmoi apply` still clones alacritty/catppuccin via the external as
-     expected. Ignoring the other 4 submodule names was tried and reverted -
-     it silently disabled their externals too, since (unlike this nested
-     alacritty/catppuccin case) their ignore pattern matched their external
-     target path exactly; they don't need it anyway, since none of them has
-     a real gitlink to collide with. */ -}}
-alacritty

@@ -29,20 +29,8 @@ root.)
   The current ignore list covers `pi/`, `wezterm/`, `tests/`, `containers/`,
   `tmux.conf.local`, `tmux.service`, `README.md`, `AGENTS.md`, `CLAUDE.md`,
   `LICENSE`, and `env.example` (real repo-root content that must stay put,
-  not become a `$HOME` target), plus `alacritty` (see next bullet). Adding a
-  new plain-named entry at repo root means adding it here too.
-- **`alacritty/catppuccin` is the one `.chezmoiexternal.toml` submodule
-  entry that's an actual git gitlink in this repo's tree** (`git ls-tree`
-  confirms the other 4 declared in `.gitmodules` - `.tmux`, `fzf-git.sh`,
-  `passfzf`, `ohmyzsh` - have no gitlink, so they never exist as a directory
-  before `git submodule update --init`, and never hit this). Because
-  chezmoi's source scan covers repo root, it finds the literal (possibly
-  still-uninitialized, empty) `alacritty/catppuccin` directory and collides
-  with the external of the same name unless `alacritty` is in
-  `.chezmoiignore.tmpl`. Ignore the *parent* name (`alacritty`, not the
-  nested `alacritty/catppuccin` path) - that resolves the collision without
-  disabling the external itself (confirmed by hand: with `alacritty`
-  ignored, `chezmoi apply` still clones `alacritty/catppuccin` normally).
+  not become a `$HOME` target). Adding a new plain-named entry at repo root
+  means adding it here too.
 - **Per-machine values flow into chezmoi via `.chezmoi.toml.tmpl`**, which
   shells out to `cat ~/.config/dotfiles/env` and parses `KEY=VALUE` lines
   into chezmoi's own `[data]` table (Sprig `splitn`/`dict`/`stat`
@@ -72,12 +60,12 @@ root.)
   hermetic path - confirmed working on this host (resolves to
   `~/.nix-profile/bin/fish`), but re-verify after any change to how fish
   lands on PATH on a given host.
-- **`.chezmoiexternal.toml`'s 5 externals coexist with the real git
+- **`.chezmoiexternal.toml`'s 4 externals coexist with the real git
   submodules on purpose, for now** - both `.gitmodules` and this file declare
-  the same 5 tools (`.tmux`, `fzf-git.sh`, `passfzf`,
-  `alacritty/catppuccin`, `ohmyzsh`), and the actual cutover away from
-  submodules is later, separate work. Target paths mirror the submodules'
-  current repo-root-relative paths, now relative to `$HOME` instead.
+  the same 4 tools (`.tmux`, `fzf-git.sh`, `passfzf`, `ohmyzsh`), and the
+  actual cutover away from submodules is later, separate work. Target paths
+  mirror the submodules' current repo-root-relative paths, now relative to
+  `$HOME` instead.
 - Validate any change here against a scratch destination, never the real
   `$HOME` or the real `~/.local/share/chezmoi`:
   `chezmoi apply --source . --destination /tmp/some-scratch --cache /tmp/some-scratch-cache --no-tty`,

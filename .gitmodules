@@ -7,9 +7,6 @@
 [submodule "passfzf"]
 	path = passfzf
 	url = https://git.sr.ht/~mlaparie/passfzf
-[submodule "alacritty/catppuccin"]
-	path = alacritty/catppuccin
-	url = https://github.com/catppuccin/alacritty.git
 [submodule "ohmyzsh"]
 	path = ohmyzsh
 	url = https://github.com/ohmyzsh/ohmyzsh.git

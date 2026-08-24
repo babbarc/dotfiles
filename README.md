@@ -26,7 +26,7 @@ Running the switch builds:
 - **Agent configs** - pi, Claude Code, and Codex all share one `AGENTS.md`
 - **Pi** - the rose-pine-moon theme, the Calm extension, and generic UI settings
 - **herdr** - tmux-style key bindings and agent panel layout
-- **Other tools** - lazygit, alacritty, sway, waybar, tmux, fonts, dev toolchains
+- **Other tools** - lazygit, sway, waybar, tmux, fonts, dev toolchains
 
 ## Repo layout
 
