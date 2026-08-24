@@ -56,6 +56,10 @@ wezterm/               setup-windows.ps1 only (one-click Windows wezterm
                         setup, fetches dot_config/wezterm/ by literal path -
                         not chezmoi-managed, Windows doesn't run chezmoi)
 tmux.conf.local        tmux configuration
+tmux.service           tmux user systemd service
+containers/            Podman quadlets for firstmate/hermes browser-proxy
+                        instances (not chezmoi-managed, referenced by the
+                        sibling nix-config repo's home-manager config)
 tests/                 Behavior tests, incl. the Pi Calm suite
 env.example            Template for the per-machine env file (see below)
 ```
