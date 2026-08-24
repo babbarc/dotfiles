@@ -30,20 +30,34 @@ Running the switch builds:
 
 ## Repo layout
 
+This repo's root is itself a standard chezmoi source directory - clone it
+and run `chezmoi init --apply` and it just works, no subdirectory or
+`--source` flag needed (though in practice `nix-config`'s `setup.sh` is
+what actually drives it - see "Fresh machine setup" above).
+
 ```
-chezmoi/              chezmoi source state (applied by nix-config's setup.sh)
-pi/                   Pi agent files: AGENTS.md, theme, extensions (incl. Calm)
-wezterm/              Complete, self-contained wezterm config (wezterm.lua,
-                      config/, utils/, events/ - no external framework
-                      dependency), plus setup-windows.ps1 (one-click Windows
-                      wezterm setup)
-herdr/                herdr config.toml (read-only in the store; edit here)
-nvim/                 lazyvim setup
-fish/                 shell config
-lazygit/              lazygit config.yml
-tmux.conf.local       tmux configuration
-tests/                Behavior tests, incl. the Pi Calm suite
-env.example           Template for the per-machine env file (see below)
+dot_config/            chezmoi source for ~/.config: fish, git, herdr,
+                        lazygit, nvim (lazyvim), starship.toml, sway,
+                        waybar, wezterm - the complete, self-contained
+                        wezterm config (no external framework dependency)
+dot_pi/                chezmoi source for ~/.pi (merges pi's settings.json,
+                        symlinks AGENTS.md/extensions/themes into pi/ below)
+dot_claude/            chezmoi source for ~/.claude (symlinks CLAUDE.md into
+                        pi/AGENTS.md below)
+dot_codex/             chezmoi source for ~/.codex (symlinks AGENTS.md into
+                        pi/AGENTS.md below)
+.chezmoi.toml.tmpl     parses ~/.config/dotfiles/env into chezmoi template data
+.chezmoiignore.tmpl    host-role gating (desktop-only tools) + excludes every
+                        non-chezmoi repo-root entry below from chezmoi's scan
+.chezmoiexternal.toml  chezmoi-managed mirrors of this repo's git submodules
+pi/                    Pi agent files: AGENTS.md, theme, extensions (incl.
+                        Calm) - the canonical source dot_pi/ symlinks into
+wezterm/               setup-windows.ps1 only (one-click Windows wezterm
+                        setup, fetches dot_config/wezterm/ by literal path -
+                        not chezmoi-managed, Windows doesn't run chezmoi)
+tmux.conf.local        tmux configuration
+tests/                 Behavior tests, incl. the Pi Calm suite
+env.example            Template for the per-machine env file (see below)
 ```
 
 ## Agent instructions
@@ -66,15 +80,14 @@ behavior is pinned by `tests/pi-calm.test.sh`.
   the existing file on every apply, so fields pi writes at runtime survive.
 - **herdr config.toml** - herdr rewrites this file at runtime, so it is
   templated by chezmoi with a documented tradeoff: edit
-  `chezmoi/dot_config/herdr/config.toml.tmpl` and run `chezmoi apply`;
+  `dot_config/herdr/config.toml.tmpl` and run `chezmoi apply`;
   don't rely on herdr's own settings UI to persist.
-- **wezterm** - `~/.config/wezterm` is this repo's own `wezterm/` tree
-  (chezmoi-managed on the laptop, downloaded by `setup-windows.ps1` on
-  Windows) - not a clone of an external framework. `wezterm/utils/` and
-  `wezterm/events/`
-  vendor the still-useful parts of the `KevinSilvester/wezterm-config`
-  framework this config started from (MIT-licensed, attribution headers in
-  each file).
+- **wezterm** - `~/.config/wezterm` is this repo's own `dot_config/wezterm/`
+  tree (chezmoi-managed on the laptop, downloaded by `setup-windows.ps1` on
+  Windows) - not a clone of an external framework. `dot_config/wezterm/utils/`
+  and `dot_config/wezterm/events/` vendor the still-useful parts of the
+  `KevinSilvester/wezterm-config` framework this config started from
+  (MIT-licensed, attribution headers in each file).
 - **lazygit state** - `state.yml` is runtime state and stays gitignored.
 
 ## Per-machine values (`~/.config/dotfiles/env`)
@@ -109,10 +122,10 @@ How each consumer reads it:
   says so in its final summary. `WEZTERM_*` keys are never written here: they
   are Windows-side only, and the Windows machine keeps its own env file (see
   "Windows wezterm" under Bootstrap below for the one-click writer).
-- **chezmoi** - `chezmoi/.chezmoi.toml.tmpl` parses the file into template
+- **chezmoi** - `.chezmoi.toml.tmpl` parses the file into template
   data at `chezmoi apply` time.
-- **wezterm** - `wezterm/config/env.lua` parses the file at runtime.
-- **fish** - `fish/conf.d/dotfiles-env.fish` exports the values.
+- **wezterm** - `dot_config/wezterm/config/env.lua` parses the file at runtime.
+- **fish** - `dot_config/fish/conf.d/dotfiles-env.fish` exports the values.
 
 ## Bootstrap
 
@@ -144,9 +157,9 @@ The script is idempotent and does three things:
    that framework), removes its leftover `.git`, `backdrops/`, `colors/`,
    and the two `utils/backdrops.lua` / `utils/gpu-adapter.lua` files this
    config dropped. A no-op on a machine that never ran the old script.
-2. **Config** - downloads this repo's complete `wezterm/` tree (19 files:
-   `wezterm.lua` plus everything under `config/`, `utils/`, `events/`) as
-   raw files from the public GitHub mirror into
+2. **Config** - downloads this repo's complete `dot_config/wezterm/` tree
+   (19 files: `wezterm.lua` plus everything under `config/`, `utils/`,
+   `events/`) as raw files from the public GitHub mirror into
    `%USERPROFILE%\.config\wezterm`, recreating the same directory structure.
 3. **Env file** - prompts for the Windows values and writes
    `%USERPROFILE%\.config\dotfiles\env` with exactly the Windows-relevant
@@ -171,7 +184,7 @@ every step without changing anything.
    New-Item -ItemType Directory -Force "$dst\config","$dst\utils","$dst\events" | Out-Null
    foreach ($f in 'wezterm.lua','config/appearance.lua','config/bindings.lua','config/domains.lua','config/env.lua','config/fonts.lua','config/general.lua','config/init.lua','config/launch.lua','utils/cells.lua','utils/math.lua','utils/opts-validator.lua','utils/platform.lua','utils/str.lua','events/gui-startup.lua','events/left-status.lua','events/new-tab-button.lua','events/right-status.lua','events/tab-title.lua') {
      $out = Join-Path $dst ($f -replace '/','\')
-     iwr "https://raw.githubusercontent.com/babbarc/dotfiles/master/wezterm/$f" -UseBasicParsing -o $out
+     iwr "https://raw.githubusercontent.com/babbarc/dotfiles/master/dot_config/wezterm/$f" -UseBasicParsing -o $out
    }
    ```
 2. Create the env file - copy the "wezterm (Windows / WSL)" block from
@@ -204,8 +217,8 @@ your first switch, via a guarded `home.activation` block per tool in
   via `git pull` or firstmate's own `/updatefirstmate` skill.
 - **herdr** - if `herdr` isn't on `PATH`, its curl installer runs. It lands
   at `~/.local/bin/herdr` and self-updates afterward via `herdr update` /
-  `herdr channel set`. Only `herdr/config.toml` is chezmoi-managed - see
-  Notable decisions above.
+  `herdr channel set`. Only `dot_config/herdr/config.toml` is chezmoi-managed
+  - see Notable decisions above.
 - **treehouse and no-mistakes** - if either isn't on `PATH`, its curl
   installer runs. Update with `treehouse update`; no-mistakes has no separate
   update command, so its installer is just re-run.
