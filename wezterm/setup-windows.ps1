@@ -65,7 +65,7 @@ function Write-Banner {
 
 function Read-EnvFile {
    # Parses KEY=VALUE lines into a hashtable (later lines win). Mirrors the
-   # parsing in wezterm/config/env.lua: whole-line '#' comments and blank
+   # parsing in dot_config/wezterm/config/env.lua: whole-line '#' comments and blank
    # lines are skipped, the key is trimmed, the value is taken verbatim.
    param([string]$Path)
    $defs = @{}
@@ -176,9 +176,11 @@ $ConfigDir  = Join-Path $WeztermDir 'config'
 $EnvDir     = Join-Path $ConfigRoot 'dotfiles'
 $EnvFile    = Join-Path $EnvDir 'env'
 
-$ConfigBase = 'https://raw.githubusercontent.com/babbarc/dotfiles/master/wezterm/'
+$ConfigBase = 'https://raw.githubusercontent.com/babbarc/dotfiles/master/dot_config/wezterm/'
 # Every file this config's wezterm.lua transitively require()s, relative to
-# $ConfigBase / $WeztermDir. Keep in sync with the wezterm/ tree in the repo -
+# $ConfigBase / $WeztermDir. Keep in sync with the dot_config/wezterm/ tree
+# in the repo (the chezmoi source state, applied on Linux/laptop; this
+# script is the Windows-only equivalent, with no chezmoi/git involved) -
 # there is no directory listing to fetch from a raw.githubusercontent.com URL,
 # so the file list has to be named explicitly.
 $ConfigFiles = @(
