@@ -1,0 +1,49 @@
+{{/* Gate desktop-only dotfiles out of server/wsl, mirroring this repo's own
+     current per-host nix `imports` split (laptop's home.nix imports
+     wezterm.nix/sway.nix/waybar.nix; server's and wsl's home.nix only
+     import modules/dev) rather than inventing a second host-conditional
+     mechanism. DOTFILES_HOST_ROLE comes from the same env-ingestion as
+     every other per-machine value (.chezmoi.toml.tmpl). */ -}}
+{{- if ne .DOTFILES_HOST_ROLE "laptop" }}
+.config/wezterm
+.config/sway
+.config/waybar
+{{- end }}
+
+{{/* Now that chezmoi's source root is the repo root (no more .chezmoiroot
+     indirection into a chezmoi subdirectory), every plain-named repo-root
+     entry that isn't itself chezmoi source content (a dot_-prefixed or
+     .chezmoi-prefixed name) is visible to chezmoi's source-state scan and
+     must be excluded here, or chezmoi materializes it as a bogus
+     literal-named target in the home directory. */ -}}
+pi
+wezterm
+tests
+containers
+tmux.conf.local
+tmux.service
+README.md
+AGENTS.md
+CLAUDE.md
+LICENSE
+env.example
+
+{{/* alacritty/catppuccin is the one repo-root path that is BOTH a real git
+     submodule gitlink (`git ls-tree` confirms it's the only one of the 5
+     .gitmodules entries actually present as a tree gitlink - the other 4
+     have no gitlink and so never exist as a directory before `git submodule
+     update --init`) and a chezmoi external of the same target name
+     (.chezmoiexternal.toml). Left unignored, chezmoi's source-state scan
+     finds the literal (possibly still-uninitialized, empty) submodule
+     directory and collides with its own external declaration for the exact
+     same path - the "inconsistent state" failure mode .chezmoiroot's own
+     header comment documents having been hit once already. Ignoring just
+     "alacritty" (not "alacritty/catppuccin") fixes the collision without
+     suppressing the external itself - confirmed by hand: with this ignored,
+     `chezmoi apply` still clones alacritty/catppuccin via the external as
+     expected. Ignoring the other 4 submodule names was tried and reverted -
+     it silently disabled their externals too, since (unlike this nested
+     alacritty/catppuccin case) their ignore pattern matched their external
+     target path exactly; they don't need it anyway, since none of them has
+     a real gitlink to collide with. */ -}}
+alacritty
