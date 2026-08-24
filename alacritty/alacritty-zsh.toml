@@ -1,5 +1,0 @@
-[general]
-import = ["~/.config/alacritty/alacritty.toml"]
-
-[terminal]
-shell = "/usr/bin/zsh"

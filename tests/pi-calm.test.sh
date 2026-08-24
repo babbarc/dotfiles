@@ -26,7 +26,7 @@ set -u
 
 TMP_ROOT=$(dotfiles_test_tmproot pi-calm)
 CALM_DIR="$ROOT/pi/extensions/calm"
-PI_NIX="$ROOT/nix/modules/dev/pi.nix"
+PI_NIX="$ROOT/chezmoi/dot_pi/agent/symlink_extensions.tmpl"
 PI_PACKAGE_DIR=${PI_CALM_TEST_PACKAGE_DIR:-"$(npm root -g 2>/dev/null)/@earendil-works/pi-coding-agent"}
 TMUX_SOCKET="pi-calm-test-$$"
 TMUX_SESSION="pi-calm-e2e"
@@ -146,12 +146,10 @@ test_zero_coupling_and_state_file() {
 }
 
 test_static_typescript_and_repo_wiring() {
-  # Home Manager links the extensions directory as a whole, so the calm
+  # chezmoi symlinks the extensions directory as a whole, so the calm
   # subdirectory auto-loads without any new declaration.
-  grep -q 'home.file.".pi/agent/extensions".source =' "$PI_NIX" \
-    || fail "pi.nix no longer links ~/.pi/agent/extensions as a directory"
-  grep -q "mkOutOfStoreSymlink \"\${dotfiles}/pi/extensions\"" "$PI_NIX" \
-    || fail "pi.nix changed the Pi extensions link target"
+  grep -q '{{ .chezmoi.homeDir }}/.dotfiles/pi/extensions' "$PI_NIX" \
+    || fail "symlink_extensions.tmpl no longer links ~/.pi/agent/extensions to pi/extensions"
   [ -f "$CALM_DIR/index.ts" ] || fail "calm extension entry point missing"
   [ -f "$CALM_DIR/LICENSE" ] || fail "calm license file missing"
 

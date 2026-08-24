@@ -1,6 +1,0 @@
-#!/bin/zsh
-
-stereo-transcode-cli() {
-    local endpoint="${STEREO_TRANSCODE_ENDPOINT:?set STEREO_TRANSCODE_ENDPOINT in ~/.config/dotfiles/env}"
-    curl -X POST -H "Content-Type: application/json" "$endpoint" -d "{\"fPath\": \"$1\"}"
-}
