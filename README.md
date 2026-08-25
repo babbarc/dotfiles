@@ -41,17 +41,16 @@ dot_config/            chezmoi source for ~/.config: fish, git, herdr,
                         waybar, wezterm - the complete, self-contained
                         wezterm config (no external framework dependency)
 dot_pi/                chezmoi source for ~/.pi (merges pi's settings.json,
-                        symlinks AGENTS.md/extensions/themes into pi/ below)
+                        places AGENTS.md, themes/, and extensions/ incl. the
+                        Calm extension as real files directly in ~/.pi/agent/)
 dot_claude/            chezmoi source for ~/.claude (symlinks CLAUDE.md into
-                        pi/AGENTS.md below)
+                        ~/.pi/agent/AGENTS.md below)
 dot_codex/             chezmoi source for ~/.codex (symlinks AGENTS.md into
-                        pi/AGENTS.md below)
+                        ~/.pi/agent/AGENTS.md below)
 .chezmoi.toml.tmpl     parses ~/.config/dotfiles/env into chezmoi template data
 .chezmoiignore.tmpl    host-role gating (desktop-only tools) + excludes every
                         non-chezmoi repo-root entry below from chezmoi's scan
 .chezmoiexternal.toml  chezmoi-managed mirrors of this repo's git submodules
-pi/                    Pi agent files: AGENTS.md, theme, extensions (incl.
-                        Calm) - the canonical source dot_pi/ symlinks into
 wezterm/               setup-windows.ps1 only (one-click Windows wezterm
                         setup, fetches dot_config/wezterm/ by literal path -
                         not chezmoi-managed, Windows doesn't run chezmoi)
@@ -66,16 +65,17 @@ env.example            Template for the per-machine env file (see below)
 
 ## Agent instructions
 
-`pi/AGENTS.md` is the single source of truth for global agent behavior. It is
-symlinked by chezmoi into `~/.pi/agent/AGENTS.md` (pi), `~/.claude/CLAUDE.md`
-(Claude Code), and `~/.codex/AGENTS.md` (Codex). Edit the one file; every
-agent picks it up on its next session.
+`dot_pi/agent/AGENTS.md` is the single source of truth for global agent
+behavior. chezmoi applies it as a real file to `~/.pi/agent/AGENTS.md` (pi);
+`~/.claude/CLAUDE.md` (Claude Code) and `~/.codex/AGENTS.md` (Codex) are
+symlinked to it by their `dot_claude/`/`dot_codex/` templates. Edit the one
+file; every agent picks it up on its next session.
 
-The Pi Calm extension (`pi/extensions/calm`) is a conversation-presentation
-toggle for pi: `/calm` hides collapsed thinking and tool-call shells so the
-transcript reads like a conversation. Adapted from the Firstmate project's
-Calm implementation (MIT, Copyright Kun Chen - see its own LICENSE). Its
-behavior is pinned by `tests/pi-calm.test.sh`.
+The Pi Calm extension (`dot_pi/agent/extensions/calm`) is a
+conversation-presentation toggle for pi: `/calm` hides collapsed thinking and
+tool-call shells so the transcript reads like a conversation. Adapted from
+the Firstmate project's Calm implementation (MIT, Copyright Kun Chen - see
+its own LICENSE). Its behavior is pinned by `tests/pi-calm.test.sh`.
 
 ## Notable decisions
 

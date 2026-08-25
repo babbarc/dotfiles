@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Deterministic rendering, lifecycle, persistence, and interactive TUI checks
-# for the standalone Pi Calm extension (pi/extensions/calm).
+# for the standalone Pi Calm extension (dot_pi/agent/extensions/calm).
 #
 # Adapted from kunchenguid/dotfiles tests/pi-calm.test.sh, which itself was
 # adapted from the Firstmate project's Calm test suite.
-# Copyright (c) 2026 Kun Chen. MIT License - see pi/extensions/calm/LICENSE.
+# Copyright (c) 2026 Kun Chen. MIT License - see dot_pi/agent/extensions/calm/LICENSE.
 #
 # Coverage:
 # - zero coupling: no forbidden identifiers anywhere in the shipped source,
@@ -25,8 +25,8 @@ set -u
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 TMP_ROOT=$(dotfiles_test_tmproot pi-calm)
-CALM_DIR="$ROOT/pi/extensions/calm"
-PI_NIX="$ROOT/dot_pi/agent/symlink_extensions.tmpl"
+CALM_DIR="$ROOT/dot_pi/agent/extensions/calm"
+PI_WIRING="$ROOT/dot_pi/agent"
 PI_PACKAGE_DIR=${PI_CALM_TEST_PACKAGE_DIR:-"$(npm root -g 2>/dev/null)/@earendil-works/pi-coding-agent"}
 TMUX_SOCKET="pi-calm-test-$$"
 TMUX_SESSION="pi-calm-e2e"
@@ -105,7 +105,7 @@ test_zero_coupling_and_state_file() {
   local pat_watch="fm_""watch_arm_pi" pat_op="FIRSTMATE""_OP" pat_dash="fm-""calm"
 
   # The operational marker and upstream runtime surfaces must not exist anywhere.
-  for file in $source_files "$ROOT/tests/pi-calm.test.sh" "$ROOT/tests/lib.sh" "$ROOT/README.md" "$PI_NIX"; do
+  for file in $source_files "$ROOT/tests/pi-calm.test.sh" "$ROOT/tests/lib.sh" "$ROOT/README.md" $(find "$PI_WIRING" -type f); do
 
     assert_not_contains "$(cat "$file")" "$pat_fm_home" "$file mentions $pat_fm_home"
     assert_not_contains "$(cat "$file")" "$pat_fm_root" "$file mentions $pat_fm_root"
@@ -122,7 +122,7 @@ test_zero_coupling_and_state_file() {
   # "Adapted from ..." line, which is excluded below - the forbidden-
   # identifiers scan above already covers the README for operational markers.
   local attribution_name="First""mate"
-  license_hits=$(grep -rni "$attribution_name" "$CALM_DIR" "$PI_NIX" 2>/dev/null | grep -v "Adapted from" || true)
+  license_hits=$(grep -rni "$attribution_name" "$CALM_DIR" "$PI_WIRING" 2>/dev/null | grep -v "Adapted from" || true)
   [ -z "$license_hits" ] || fail "unexpected upstream references outside license attribution: $license_hits"
   grep -q "MIT License" "$CALM_DIR/LICENSE" || fail "calm LICENSE lost the MIT permission text"
   grep -q "Copyright (c) 2026 Kun Chen" "$CALM_DIR/LICENSE" || fail "calm LICENSE lost the copyright notice"
@@ -131,12 +131,14 @@ test_zero_coupling_and_state_file() {
   done
 
   # The runtime preference file must never be tracked or Home Manager managed.
-  if git -C "$ROOT" ls-files --error-unmatch pi/agent/calm >/dev/null 2>&1; then
+  if git -C "$ROOT" ls-files --error-unmatch dot_pi/agent/calm >/dev/null 2>&1; then
     fail "the Calm state file is tracked in the repository"
   fi
-  assert_not_contains "$(cat "$PI_NIX")" '.pi/agent/calm' "pi.nix manages the Calm state file"
-  grep -q '^/pi/agent/calm$' "$ROOT/.gitignore" \
-    || fail ".gitignore does not guard /pi/agent/calm"
+  for file in $(find "$PI_WIRING" -type f); do
+    assert_not_contains "$(cat "$file")" '.pi/agent/calm' "a dot_pi/agent wiring file manages the Calm state file"
+  done
+  grep -q '^/dot_pi/agent/calm$' "$ROOT/.gitignore" \
+    || fail ".gitignore does not guard /dot_pi/agent/calm"
 
   # The shipped tree never references upstream paths or identifiers in code.
   assert_not_contains "$(cat "$CALM_DIR/index.ts")" "pi.events" "index.ts emits on a shared event bus"
@@ -147,15 +149,19 @@ test_zero_coupling_and_state_file() {
 }
 
 test_static_typescript_and_repo_wiring() {
-  # chezmoi symlinks the extensions directory as a whole, so the calm
-  # subdirectory auto-loads without any new declaration.
-  grep -q '{{ .chezmoi.homeDir }}/.dotfiles/pi/extensions' "$PI_NIX" \
-    || fail "symlink_extensions.tmpl no longer links ~/.pi/agent/extensions to pi/extensions"
+  # chezmoi applies the extensions tree as real files under
+  # ~/.pi/agent/extensions/, so the calm subdirectory auto-loads without any
+  # symlink indirection through a dotfiles checkout.
+  [ -d "$ROOT/dot_pi/agent/extensions" ] || fail "dot_pi/agent/extensions is missing"
+  [ -d "$CALM_DIR" ] || fail "calm is not a real file tree under dot_pi/agent/extensions"
+  if find "$ROOT/dot_pi" -name 'symlink_*' -print -quit | grep -q .; then
+    fail "dot_pi/ still wires ~/.pi/agent through a dotfiles-folder symlink template"
+  fi
   [ -f "$CALM_DIR/index.ts" ] || fail "calm extension entry point missing"
   [ -f "$CALM_DIR/LICENSE" ] || fail "calm license file missing"
 
   # JavaScript syntax of the pre-existing extension stays valid.
-  node --check "$ROOT/pi/extensions/terminal-status-title.js" \
+  node --check "$ROOT/dot_pi/agent/extensions/terminal-status-title.js" \
     || fail "terminal-status-title.js has a JavaScript syntax error"
 
   if ! have_pi_package; then

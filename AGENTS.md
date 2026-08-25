@@ -26,7 +26,7 @@ root.)
   target under `$HOME`, or - worse - hits a hard "inconsistent state" error
   if the name also collides with a `.chezmoiexternal.toml` entry (confirmed
   by hand, both failure modes, while promoting `chezmoi/` to repo root).**
-  The current ignore list covers `pi/`, `wezterm/`, `tests/`, `containers/`,
+  The current ignore list covers `wezterm/`, `tests/`, `containers/`,
   `tmux.conf.local`, `tmux.service`, `README.md`, `AGENTS.md`, `CLAUDE.md`,
   `LICENSE`, and `env.example` (real repo-root content that must stay put,
   not become a `$HOME` target). Adding a new plain-named entry at repo root

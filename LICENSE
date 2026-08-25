@@ -22,6 +22,6 @@ SOFTWARE.
 
 ---
 
-Note: `pi/extensions/calm/` carries its own MIT license (Copyright Kun Chen)
+Note: `dot_pi/agent/extensions/calm/` carries its own MIT license (Copyright Kun Chen)
 and keeps its own attribution; the repository license above covers the rest
 of this repo.
