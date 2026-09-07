@@ -26,7 +26,7 @@ Running the switch builds:
 - **Agent configs** - pi, Claude Code, and Codex all share one `AGENTS.md`
 - **Pi** - the rose-pine-moon theme, the Calm extension, and generic UI settings
 - **herdr** - tmux-style key bindings and agent panel layout
-- **Other tools** - lazygit, sway, waybar, tmux, fonts, dev toolchains
+- **Other tools** - lazygit, sway, waybar, fonts, dev toolchains
 
 ## Repo layout
 
@@ -54,8 +54,6 @@ dot_codex/             chezmoi source for ~/.codex (symlinks AGENTS.md into
 wezterm/               setup-windows.ps1 only (one-click Windows wezterm
                         setup, fetches dot_config/wezterm/ by literal path -
                         not chezmoi-managed, Windows doesn't run chezmoi)
-tmux.conf.local        tmux configuration
-tmux.service           tmux user systemd service
 containers/            Podman quadlets for firstmate/hermes browser-proxy
                         instances (not chezmoi-managed, referenced by the
                         sibling nix-config repo's home-manager config)

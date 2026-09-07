@@ -27,7 +27,7 @@ root.)
   if the name also collides with a `.chezmoiexternal.toml` entry (confirmed
   by hand, both failure modes, while promoting `chezmoi/` to repo root).**
   The current ignore list covers `wezterm/`, `tests/`, `containers/`,
-  `tmux.conf.local`, `tmux.service`, `README.md`, `AGENTS.md`, `CLAUDE.md`,
+  `README.md`, `AGENTS.md`, `CLAUDE.md`,
   `LICENSE`, and `env.example` (real repo-root content that must stay put,
   not become a `$HOME` target). Adding a new plain-named entry at repo root
   means adding it here too.
@@ -60,12 +60,12 @@ root.)
   hermetic path - confirmed working on this host (resolves to
   `~/.nix-profile/bin/fish`), but re-verify after any change to how fish
   lands on PATH on a given host.
-- **`.chezmoiexternal.toml`'s 4 externals coexist with the real git
+- **`.chezmoiexternal.toml`'s 2 externals coexist with the real git
   submodules on purpose, for now** - both `.gitmodules` and this file declare
-  the same 4 tools (`.tmux`, `fzf-git.sh`, `passfzf`, `ohmyzsh`), and the
-  actual cutover away from submodules is later, separate work. Target paths
-  mirror the submodules' current repo-root-relative paths, now relative to
-  `$HOME` instead.
+  the same 2 tools (`fzf-git.sh`, `passfzf`); `ohmyzsh` and `.tmux` were
+  removed (this repo's shell is fish and its multiplexer is herdr, so zsh
+  and tmux are unused on every host). Target paths mirror the submodules'
+  repo-root-relative paths, now relative to `$HOME`.
 - Validate any change here against a scratch destination, never the real
   `$HOME` or the real `~/.local/share/chezmoi`:
   `chezmoi apply --source . --destination /tmp/some-scratch --cache /tmp/some-scratch-cache --no-tty`,
