@@ -1,6 +1,3 @@
 [submodule "fzf-git.sh"]
 	path = fzf-git.sh
 	url = https://github.com/junegunn/fzf-git.sh.git
-[submodule "passfzf"]
-	path = passfzf
-	url = https://git.sr.ht/~mlaparie/passfzf

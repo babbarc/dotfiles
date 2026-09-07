@@ -1,18 +1,12 @@
-# Chezmoi-managed mirrors of this repo's 2 git submodules (.gitmodules):
-# fzf-git.sh and passfzf. The zsh (ohmyzsh) and tmux (.tmux) externals were
-# removed - this repo's shell is fish and its multiplexer is herdr, so zsh
-# and tmux are unused on every host.
+# Chezmoi-managed mirror of this repo's single git submodule (.gitmodules):
+# fzf-git.sh. The zsh (ohmyzsh), tmux (.tmux), and passfzf externals were
+# removed - the shell is fish, the multiplexer is herdr, and passfzf is
+# unused. fzf-git.sh is wired into fish via dot_config/fish/conf.d/fzf-git.fish.
 # refreshPeriod = "168h" (1 week); `chezmoi update --refresh-externals` forces
-# an earlier refetch. Target paths mirror the submodule paths.
+# an earlier refetch.
 
 ["fzf-git.sh"]
     type = "git-repo"
     url = "https://github.com/junegunn/fzf-git.sh.git"
-    refreshPeriod = "168h"
-    clone.args = ["--depth", "1"]
-
-["passfzf"]
-    type = "git-repo"
-    url = "https://git.sr.ht/~mlaparie/passfzf"
     refreshPeriod = "168h"
     clone.args = ["--depth", "1"]

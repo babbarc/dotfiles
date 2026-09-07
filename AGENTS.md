@@ -60,12 +60,12 @@ root.)
   hermetic path - confirmed working on this host (resolves to
   `~/.nix-profile/bin/fish`), but re-verify after any change to how fish
   lands on PATH on a given host.
-- **`.chezmoiexternal.toml`'s 2 externals coexist with the real git
-  submodules on purpose, for now** - both `.gitmodules` and this file declare
-  the same 2 tools (`fzf-git.sh`, `passfzf`); `ohmyzsh` and `.tmux` were
-  removed (this repo's shell is fish and its multiplexer is herdr, so zsh
-  and tmux are unused on every host). Target paths mirror the submodules'
-  repo-root-relative paths, now relative to `$HOME`.
+- **`.chezmoiexternal.toml`'s single external coexists with the real git
+  submodule on purpose, for now** - both `.gitmodules` and this file declare
+  `fzf-git.sh`; `ohmyzsh`, `.tmux`, and `passfzf` were removed (the shell is
+  fish, the multiplexer is herdr, and passfzf is unused). fzf-git.sh is
+  sourced by `dot_config/fish/conf.d/fzf-git.fish`. The target path mirrors
+  the submodule's repo-root-relative path, now relative to `$HOME`.
 - Validate any change here against a scratch destination, never the real
   `$HOME` or the real `~/.local/share/chezmoi`:
   `chezmoi apply --source . --destination /tmp/some-scratch --cache /tmp/some-scratch-cache --no-tty`,
