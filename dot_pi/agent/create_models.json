@@ -3,7 +3,7 @@
     "deepseek": {
       "modelOverrides": {
         "deepseek-v4-flash": {
-          "contextWindow": 1000000,
+          "contextWindow": 272000,
           "maxTokens": 384000,
           "cost": {
             "input": 0.44,
@@ -13,7 +13,7 @@
           }
         },
         "deepseek-v4-flash-vision-exp": {
-          "contextWindow": 1000000,
+          "contextWindow": 272000,
           "maxTokens": 384000,
           "cost": {
             "input": 0.44,
@@ -23,7 +23,7 @@
           }
         },
         "deepseek-v4-pro": {
-          "contextWindow": 1000000,
+          "contextWindow": 272000,
           "maxTokens": 384000,
           "cost": {
             "input": 1.32,
