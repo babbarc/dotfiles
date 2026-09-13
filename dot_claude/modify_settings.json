@@ -1,0 +1,22 @@
+#!/bin/sh
+# Claude Code rewrites ~/.claude/settings.json at runtime (hooks such as the
+# herdr SessionStart hook, plus whatever else Claude Code itself persists
+# there), so this mirrors dot_pi/agent/modify_settings.json's contract: a
+# chezmoi modify_ script that merges managed defaults into the existing file
+# rather than replacing it outright. chezmoi feeds the existing target
+# content on stdin (empty if the file doesn't exist yet) and expects the new
+# content on stdout - existing on the left, managed defaults on the right, so
+# defaults win on overlapping keys and every other key (including the herdr
+# SessionStart hook) survives untouched.
+set -eu
+
+defaults='{
+  "autoCompactWindow": 1000000
+}'
+
+existing="$(cat)"
+if [ -z "$existing" ]; then
+  existing='{}'
+fi
+
+printf '%s' "$existing" | jq --argjson defaults "$defaults" '. * $defaults'
