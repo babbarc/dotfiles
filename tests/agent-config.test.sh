@@ -11,15 +11,16 @@
 #   the herdr SessionStart hook and any other existing key;
 # - dot_pi/agent/create_models.json is created only when ~/.pi/agent/models.json
 #   is absent, and a real chezmoi apply never touches a pre-existing one;
-# - dot_pi/agent/create_models.json caps every model override's contextWindow
-#   at 272000 (mirroring Claude's autoCompactWindow cap), including the
-#   deepseek-flash and deepseek-v4-pro overrides.
+# - dot_pi/agent/create_models.json raises the deepseek-flash and
+#   deepseek-v4-pro contextWindow overrides to 400000 (mirroring Claude's
+#   autoCompactWindow), while the openai-codex gpt-5.6-* overrides stay
+#   capped at 272000.
 set -u
 
 # shellcheck source=tests/lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-test_models_json_seed_caps_context_window_at_272k() {
+test_models_json_seed_caps_deepseek_at_400k_and_codex_at_272k() {
   local create_src="$ROOT/dot_pi/agent/create_models.json" stale_keys model window max_window
   [ -f "$create_src" ] || fail "dot_pi/agent/create_models.json is missing"
   jq -e . "$create_src" >/dev/null 2>&1 || fail "dot_pi/agent/create_models.json is not valid JSON"
@@ -27,15 +28,23 @@ test_models_json_seed_caps_context_window_at_272k() {
   stale_keys=$(jq -r '.providers.deepseek.modelOverrides | keys[] | select(startswith("deepseek-v4-") and . != "deepseek-v4-pro")' "$create_src")
   [ -z "$stale_keys" ] || fail "stale deepseek-v4-* override(s) found in create_models.json: $stale_keys"
 
+  # Deepseek's pre-compaction point moves to 400k, mirroring Claude's
+  # autoCompactWindow.
   for model in deepseek-flash deepseek-v4-pro; do
     window=$(jq -r --arg m "$model" '.providers.deepseek.modelOverrides[$m].contextWindow // empty' "$create_src")
+    [ "$window" = "400000" ] || fail "$model override missing or not capped at 400000: ${window:-<missing>}"
+  done
+
+  # Codex overrides keep the earlier 272k cap - only claude and deepseek moved.
+  for model in gpt-5.6-luna gpt-5.6-sol gpt-5.6-terra; do
+    window=$(jq -r --arg m "$model" '.providers["openai-codex"].modelOverrides[$m].contextWindow // empty' "$create_src")
     [ "$window" = "272000" ] || fail "$model override missing or not capped at 272000: ${window:-<missing>}"
   done
 
   max_window=$(jq -r '[.providers[].modelOverrides[].contextWindow] | max' "$create_src")
-  [ "$max_window" -le 272000 ] || fail "a model override in create_models.json exceeds 272000: $max_window"
+  [ "$max_window" -le 400000 ] || fail "a model override in create_models.json exceeds 400000: $max_window"
 
-  pass "create_models.json caps deepseek-flash and deepseek-v4-pro overrides (and all overrides) at 272000"
+  pass "create_models.json caps deepseek-flash and deepseek-v4-pro at 400000 and the openai-codex gpt-5.6-* overrides at 272000"
 }
 
 test_pi_settings_modify_script_merges_and_preserves() {
@@ -76,13 +85,13 @@ test_claude_settings_modify_script_preserves_herdr_hook() {
   existing='{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"herdr session-start"}]}]},"otherKey":"keep-me"}'
   out=$(printf '%s' "$existing" | "$script") || fail "claude modify_settings.json script exited non-zero"
 
-  assert_contains "$out" '"autoCompactWindow": 272000' "claude settings merge missing autoCompactWindow"
+  assert_contains "$out" '"autoCompactWindow": 400000' "claude settings merge missing autoCompactWindow"
   assert_contains "$out" 'herdr session-start' "claude settings merge dropped the herdr SessionStart hook"
   assert_contains "$out" '"otherKey": "keep-me"' "claude settings merge dropped an unrelated existing key"
 
   # Empty/absent existing file must not fail the script.
   out=$(printf '' | "$script") || fail "claude modify_settings.json failed on an empty/absent existing file"
-  assert_contains "$out" '"autoCompactWindow": 272000' "claude settings merge on empty input missing autoCompactWindow"
+  assert_contains "$out" '"autoCompactWindow": 400000' "claude settings merge on empty input missing autoCompactWindow"
 
   pass "claude modify_settings.json merges autoCompactWindow and preserves the herdr SessionStart hook and other keys"
 }
@@ -130,7 +139,7 @@ test_models_json_is_create_only() {
   pass "create_models.json seeds ~/.pi/agent/models.json once and a later apply never touches a hand-edited copy"
 }
 
-test_models_json_seed_caps_context_window_at_272k
+test_models_json_seed_caps_deepseek_at_400k_and_codex_at_272k
 test_pi_settings_modify_script_merges_and_preserves
 test_claude_settings_modify_script_preserves_herdr_hook
 test_models_json_is_create_only

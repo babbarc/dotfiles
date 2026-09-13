@@ -3,11 +3,11 @@
     "deepseek": {
       "modelOverrides": {
         "deepseek-flash": {
-          "contextWindow": 272000,
+          "contextWindow": 400000,
           "maxTokens": 384000
         },
         "deepseek-v4-pro": {
-          "contextWindow": 272000,
+          "contextWindow": 400000,
           "maxTokens": 384000
         }
       }
