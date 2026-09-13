@@ -2,35 +2,13 @@
   "providers": {
     "deepseek": {
       "modelOverrides": {
-        "deepseek-v4-flash": {
+        "deepseek-flash": {
           "contextWindow": 272000,
-          "maxTokens": 384000,
-          "cost": {
-            "input": 0.44,
-            "output": 1.32,
-            "cacheRead": 0.014,
-            "cacheWrite": 0
-          }
-        },
-        "deepseek-v4-flash-vision-exp": {
-          "contextWindow": 272000,
-          "maxTokens": 384000,
-          "cost": {
-            "input": 0.44,
-            "output": 1.32,
-            "cacheRead": 0.014,
-            "cacheWrite": 0
-          }
+          "maxTokens": 384000
         },
         "deepseek-v4-pro": {
           "contextWindow": 272000,
-          "maxTokens": 384000,
-          "cost": {
-            "input": 1.32,
-            "output": 3.96,
-            "cacheRead": 0.044,
-            "cacheWrite": 0
-          }
+          "maxTokens": 384000
         }
       }
     },

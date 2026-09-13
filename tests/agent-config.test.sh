@@ -13,30 +13,29 @@
 #   is absent, and a real chezmoi apply never touches a pre-existing one;
 # - dot_pi/agent/create_models.json caps every model override's contextWindow
 #   at 272000 (mirroring Claude's autoCompactWindow cap), including the
-#   deepseek-v4-* overrides.
+#   deepseek-flash and deepseek-v4-pro overrides.
 set -u
 
 # shellcheck source=tests/lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 test_models_json_seed_caps_context_window_at_272k() {
-  local create_src="$ROOT/dot_pi/agent/create_models.json" deepseek_windows max_window
+  local create_src="$ROOT/dot_pi/agent/create_models.json" stale_keys model window max_window
   [ -f "$create_src" ] || fail "dot_pi/agent/create_models.json is missing"
   jq -e . "$create_src" >/dev/null 2>&1 || fail "dot_pi/agent/create_models.json is not valid JSON"
 
-  deepseek_windows=$(jq -r '.providers.deepseek.modelOverrides | to_entries[] | select(.key | startswith("deepseek-v4-")) | "\(.key)=\(.value.contextWindow)"' "$create_src")
-  [ -n "$deepseek_windows" ] || fail "no deepseek-v4-* model overrides found in create_models.json"
-  while IFS= read -r line; do
-    case "$line" in
-      *=272000) ;;
-      *) fail "deepseek-v4-* override not capped at 272000: $line" ;;
-    esac
-  done <<<"$deepseek_windows"
+  stale_keys=$(jq -r '.providers.deepseek.modelOverrides | keys[] | select(startswith("deepseek-v4-") and . != "deepseek-v4-pro")' "$create_src")
+  [ -z "$stale_keys" ] || fail "stale deepseek-v4-* override(s) found in create_models.json: $stale_keys"
+
+  for model in deepseek-flash deepseek-v4-pro; do
+    window=$(jq -r --arg m "$model" '.providers.deepseek.modelOverrides[$m].contextWindow // empty' "$create_src")
+    [ "$window" = "272000" ] || fail "$model override missing or not capped at 272000: ${window:-<missing>}"
+  done
 
   max_window=$(jq -r '[.providers[].modelOverrides[].contextWindow] | max' "$create_src")
   [ "$max_window" -le 272000 ] || fail "a model override in create_models.json exceeds 272000: $max_window"
 
-  pass "create_models.json caps every deepseek-v4-* override (and all overrides) at 272000"
+  pass "create_models.json caps deepseek-flash and deepseek-v4-pro overrides (and all overrides) at 272000"
 }
 
 test_pi_settings_modify_script_merges_and_preserves() {
