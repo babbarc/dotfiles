@@ -1,6 +1,6 @@
 {{/* Ingest ~/.config/dotfiles/env (the single per-machine-values file also
      read by nix, wezterm, fish, and zsh - see env.example) into chezmoi's
-     own [data] table, so templates here can read e.g. .DOTFILES_USER_EMAIL
+     own [data] table, so templates here can read e.g. .DOTFILES_HOST_ROLE
      without duplicating those values into a second, chezmoi-only prompt
      flow. KEY=VALUE lines, "#" starts a whole-line comment, same format
      env.example documents. Missing file (e.g. a fresh scratch destination
