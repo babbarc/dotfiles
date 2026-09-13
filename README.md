@@ -23,8 +23,10 @@ Running the switch builds:
 - **Shell** - fish with custom key bindings and functions
 - **Editor** - Neovim (lazyvim) with the rose-pine-moon theme
 - **Terminal** - WezTerm (rose-pine-moon theme, dimmed unfocused windows)
-- **Agent configs** - pi, Claude Code, and Codex all share one `AGENTS.md`
-- **Pi** - the rose-pine-moon theme, the Calm extension, and generic UI settings
+- **Agent configs** - pi, Claude Code, and Codex are fully chezmoi-managed
+  and all share one `AGENTS.md`
+- **Pi** - the rose-pine-moon theme, the Calm extension, generic UI
+  settings, and a create-only seed for `models.json`
 - **herdr** - tmux-style key bindings and agent panel layout
 - **Other tools** - lazygit, sway, waybar, fonts, dev toolchains
 
@@ -41,10 +43,11 @@ dot_config/            chezmoi source for ~/.config: fish, git, herdr,
                         waybar, wezterm - the complete, self-contained
                         wezterm config (no external framework dependency)
 dot_pi/                chezmoi source for ~/.pi (merges pi's settings.json,
-                        places AGENTS.md, themes/, and extensions/ incl. the
-                        Calm extension as real files directly in ~/.pi/agent/)
-dot_claude/            chezmoi source for ~/.claude (symlinks CLAUDE.md into
-                        ~/.pi/agent/AGENTS.md below)
+                        seeds a create-only models.json, places AGENTS.md,
+                        themes/, and extensions/ incl. the Calm extension as
+                        real files directly in ~/.pi/agent/)
+dot_claude/            chezmoi source for ~/.claude (merges settings.json,
+                        symlinks CLAUDE.md into ~/.pi/agent/AGENTS.md below)
 dot_codex/             chezmoi source for ~/.codex (symlinks AGENTS.md into
                         ~/.pi/agent/AGENTS.md below)
 .chezmoi.toml.tmpl     parses ~/.config/dotfiles/env into chezmoi template data
@@ -57,7 +60,8 @@ wezterm/               setup-windows.ps1 only (one-click Windows wezterm
 containers/            Podman quadlets for firstmate/hermes browser-proxy
                         instances (not chezmoi-managed, referenced by the
                         sibling nix-config repo's home-manager config)
-tests/                 Behavior tests, incl. the Pi Calm suite
+tests/                 Behavior tests, incl. the Pi Calm suite and the
+                        pi/Claude settings-merge and models.json seed suite
 env.example            Template for the per-machine env file (see below)
 ```
 
@@ -75,11 +79,31 @@ tool-call shells so the transcript reads like a conversation. Adapted from
 the Firstmate project's Calm implementation (MIT, Copyright Kun Chen - see
 its own LICENSE). Its behavior is pinned by `tests/pi-calm.test.sh`.
 
+The pi and Claude Code settings merges and the models.json create-only seed
+are pinned by `tests/agent-config.test.sh`.
+
 ## Notable decisions
 
-- **Pi settings.json** - chezmoi's `modify_settings.json` merges a handful of
-  managed defaults (theme, hideThinkingBlock, steeringMode, followUpMode) into
-  the existing file on every apply, so fields pi writes at runtime survive.
+- **Pi settings.json** - chezmoi's `dot_pi/agent/modify_settings.json` merges
+  a handful of managed defaults (theme, hideThinkingBlock, steeringMode,
+  followUpMode, images.blockImages, terminal.showImages, quietStartup,
+  collapseChangelog) into the existing file on every apply, so fields pi
+  writes at runtime (including its own `packages` array) survive. It
+  deliberately does not manage `packages` or `extensions`: pi owns
+  `packages` itself, and the guide's 3 third-party extensions
+  (`terminal-status-title.js`, Calm, and the theme's companion extension)
+  are installed by the sibling `nix-config` repo, not here.
+- **Pi models.json** - `dot_pi/agent/create_models.json` seeds
+  `~/.pi/agent/models.json` only if it doesn't already exist (chezmoi's
+  create-only attribute), with the deepseek and openai-codex
+  `modelOverrides` from
+  [Kun's Pi Agent Config](https://blog.kunchenguid.com/p/kuns-pi-agent-config).
+  After that first apply the file is plain user config: hand-edit it
+  freely, chezmoi will never touch it again.
+- **Claude Code settings.json** - chezmoi's `dot_claude/modify_settings.json`
+  merges `autoCompactWindow` into the existing file the same way the pi
+  script does, so the herdr SessionStart hook and every other
+  Claude Code-written key survive.
 - **herdr config.toml** - herdr rewrites this file at runtime, so it is
   templated by chezmoi with a documented tradeoff: edit
   `dot_config/herdr/config.toml.tmpl` and run `chezmoi apply`;
@@ -245,8 +269,13 @@ gh auth login
 The switch prints a one-line reminder (via `gh auth status`) if you aren't
 authenticated yet, but never blocks or fails on it.
 
-Pi's own third-party extensions/themes and npm/git packages are managed by
-Pi's installer at runtime, not a bootstrap step here.
+Pi's third-party extensions (per
+[Kun's Pi Agent Config](https://blog.kunchenguid.com/p/kuns-pi-agent-config))
+and npm/git packages are installed by the sibling `nix-config` repo, not a
+bootstrap step here; this repo only carries `dot_pi/agent/`'s own config
+content (settings.json merge, the create-only models.json seed, the theme,
+AGENTS.md, and the `terminal-status-title.js`/Calm extensions already
+shipped as real files - see Notable decisions above).
 
 ## Attribution
 

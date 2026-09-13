@@ -79,6 +79,33 @@ root.)
   wired into nix activation itself, to keep nix and chezmoi decoupled) - a
   failure there only warns, it doesn't fail the whole script.
 
+## Agent config ownership boundary with nix-config
+
+dotfiles owns all `~/.pi`, `~/.claude`, `~/.codex` config content; the
+sibling `nix-config` repo carries packages and tool installers only
+(including the guide's 3rd-party Pi extensions from
+[Kun's Pi Agent Config](https://blog.kunchenguid.com/p/kuns-pi-agent-config)).
+
+- **`dot_pi/agent/create_models.json`** seeds `~/.pi/agent/models.json` via
+  chezmoi's `create_` attribute: created only if absent, never modified
+  again - so a hand edit survives every future `chezmoi apply` forever.
+  This is the one deliberate exception to "dotfiles owns everything": once
+  seeded, `models.json` is the captain's own file to tweak.
+- **`dot_pi/agent/modify_settings.json` and `dot_claude/modify_settings.json`**
+  share one contract (see the comment atop each): chezmoi feeds the existing
+  target file on stdin, the script merges its own small default set on top
+  with `jq '. * $defaults'`, and prints the result on stdout - existing
+  content wins on every key the script doesn't declare, so runtime-written
+  fields (pi's `defaultProvider`/`packages`, Claude Code's hooks) always
+  survive. Neither script declares `packages` or `extensions`: pi owns its
+  `packages` array and nix-config owns extension registration.
+- Both `dot_claude/symlink_CLAUDE.md.tmpl` and `dot_codex/symlink_AGENTS.md.tmpl`
+  point at `~/.pi/agent/AGENTS.md`; a broken symlink there almost always
+  means that file went missing or `dot_pi/agent/AGENTS.md` was renamed.
+- `tests/agent-config.test.sh` pins all three (the two merge scripts
+  directly, and the create-only seed via a real scratch `chezmoi apply`
+  cycle) - extend it, not a fresh ad hoc script, for related changes.
+
 ## Maintaining this file
 
 Keep this file for knowledge useful to almost every future agent session in this project.
