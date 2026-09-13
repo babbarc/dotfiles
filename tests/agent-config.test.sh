@@ -54,13 +54,13 @@ test_claude_settings_modify_script_preserves_herdr_hook() {
   existing='{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"herdr session-start"}]}]},"otherKey":"keep-me"}'
   out=$(printf '%s' "$existing" | "$script") || fail "claude modify_settings.json script exited non-zero"
 
-  assert_contains "$out" '"autoCompactWindow": 1000000' "claude settings merge missing autoCompactWindow"
+  assert_contains "$out" '"autoCompactWindow": 272000' "claude settings merge missing autoCompactWindow"
   assert_contains "$out" 'herdr session-start' "claude settings merge dropped the herdr SessionStart hook"
   assert_contains "$out" '"otherKey": "keep-me"' "claude settings merge dropped an unrelated existing key"
 
   # Empty/absent existing file must not fail the script.
   out=$(printf '' | "$script") || fail "claude modify_settings.json failed on an empty/absent existing file"
-  assert_contains "$out" '"autoCompactWindow": 1000000' "claude settings merge on empty input missing autoCompactWindow"
+  assert_contains "$out" '"autoCompactWindow": 272000' "claude settings merge on empty input missing autoCompactWindow"
 
   pass "claude modify_settings.json merges autoCompactWindow and preserves the herdr SessionStart hook and other keys"
 }

@@ -38,7 +38,7 @@ and run `chezmoi init --apply` and it just works, no subdirectory or
 what actually drives it - see "Fresh machine setup" above).
 
 ```
-dot_config/            chezmoi source for ~/.config: fish, git, herdr,
+dot_config/            chezmoi source for ~/.config: fish, herdr,
                         lazygit, nvim (lazyvim), starship.toml, sway,
                         waybar, wezterm - the complete, self-contained
                         wezterm config (no external framework dependency)

@@ -10,8 +10,12 @@
 # SessionStart hook) survives untouched.
 set -eu
 
+# Claude Code compacts at min(autoCompactWindow, the active model's own
+# context window). 272000 leaves 200k-window models unaffected (200k <
+# 272000) while capping long-context models' effective compaction
+# threshold at 272k instead of letting them run to their full window.
 defaults='{
-  "autoCompactWindow": 1000000
+  "autoCompactWindow": 272000
 }'
 
 existing="$(cat)"

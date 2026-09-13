@@ -38,7 +38,7 @@ root.)
   `env.example`), not a second prompted config. Missing env file (e.g. a
   fresh scratch destination) degrades to an empty data set rather than a
   template error. Templates read the values directly, e.g.
-  `.DOTFILES_USER_EMAIL`, `.DOTFILES_HOST_ROLE`.
+  `.DOTFILES_HOST_ROLE`.
 - **`.chezmoiignore.tmpl` also gates `.config/wezterm`, `.config/sway`,
   `.config/waybar` out of non-laptop roles** via `.DOTFILES_HOST_ROLE`,
   mirroring the sibling `nix-config` repo's own per-host imports split -
