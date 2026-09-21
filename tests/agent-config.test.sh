@@ -69,10 +69,18 @@ test_pi_settings_modify_script_merges_and_preserves() {
   assert_contains "$out" '"custom": 1' "pi settings merge dropped a nested key under images"
   assert_contains "$out" '"lastChangelogVersion": "1.2.3"' "pi settings merge dropped lastChangelogVersion"
 
-  # This script must not manage packages/extensions itself - it must only pass
-  # through whatever pi (or the pre-existing file) already had for them.
-  assert_not_contains "$(cat "$script")" '"packages"' "pi modify_settings.json declares its own packages default"
+  # packages is a union: pi-added entries kept, managed unpinned ones appended.
+  assert_contains "$out" '"npm:pi-web-access"' "pi settings merge missing pi-web-access"
+  assert_contains "$out" '"npm:@ryan_nookpi/pi-extension-codex-fast-mode"' "pi settings merge missing codex-fast-mode"
+  assert_contains "$out" '"git:github.com/algal/pi-openai-server-compaction"' "pi settings merge missing pi-openai-server-compaction"
+  assert_not_contains "$out" '@[0-9]' "pi settings merge pinned an npm package version"
+  assert_contains "$(cat "$script")" 'managed_packages' "pi modify_settings.json lost its managed packages set"
   assert_not_contains "$(cat "$script")" '"extensions"' "pi modify_settings.json declares its own extensions default"
+
+  # Idempotent, and empty input seeds exactly the managed set.
+  [ "$(printf '%s' "$out" | "$script")" = "$out" ] || fail "pi settings merge is not idempotent"
+  [ "$(printf '' | "$script" | jq -c .packages)" = '["npm:pi-web-access","npm:@ryan_nookpi/pi-extension-codex-fast-mode","git:github.com/algal/pi-openai-server-compaction"]' ] || fail "empty settings did not seed the managed packages"
+  [ "$(printf '%s' "$out" | jq -c '.packages[0]')" = '"foo"' ] || fail "existing package order not preserved"
 
   pass "pi modify_settings.json merges the full default set and preserves every pi-written and nested key"
 }

@@ -82,9 +82,9 @@ root.)
 ## Agent config ownership boundary with nix-config
 
 dotfiles owns all `~/.pi`, `~/.claude`, `~/.codex` config content; the
-sibling `nix-config` repo carries packages and tool installers only
-(including the guide's 3rd-party Pi extensions from
-[Kun's Pi Agent Config](https://blog.kunchenguid.com/p/kuns-pi-agent-config)).
+sibling `nix-config` repo carries packages and tool installers only. The
+guide's 3rd-party Pi extensions ([Kun's Pi Agent Config](https://blog.kunchenguid.com/p/kuns-pi-agent-config))
+are no longer nix-packaged; they are pi-managed via `packages` below.
 
 - **`dot_pi/agent/create_models.json`** seeds `~/.pi/agent/models.json` via
   chezmoi's `create_` attribute: created only if absent, never modified

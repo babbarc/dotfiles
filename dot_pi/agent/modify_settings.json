@@ -11,9 +11,10 @@
 # `jq -s '.[0] * .[1]' "$settings_file" defaults.json`: existing on the left,
 # managed defaults on the right, so defaults win on overlapping keys and
 # every pi-written field neither side shares survives untouched. `packages`
-# and `extensions` are deliberately absent from `defaults` below: pi owns
-# `packages` itself, and the guide's 3 third-party extensions are registered
-# by nix-config, not here.
+# is the exception to "defaults win": it is a union of the existing array and
+# `managed_packages` below, so packages pi adds itself are never erased. The
+# npm specs are deliberately unpinned (versioned specs are pinned and skipped
+# by `pi update`). `extensions` stays absent: nothing here registers those.
 set -eu
 
 defaults='{
@@ -31,9 +32,20 @@ defaults='{
   "collapseChangelog": true
 }'
 
+managed_packages='[
+  "npm:pi-web-access",
+  "npm:@ryan_nookpi/pi-extension-codex-fast-mode",
+  "git:github.com/algal/pi-openai-server-compaction"
+]'
+
 existing="$(cat)"
 if [ -z "$existing" ]; then
   existing='{}'
 fi
 
-printf '%s' "$existing" | jq --argjson defaults "$defaults" '. * $defaults'
+printf '%s' "$existing" | jq --argjson defaults "$defaults" --argjson managed "$managed_packages" '
+  def src: if type == "object" then .source else . end;
+  (.packages // []) as $have
+  | (. * $defaults)
+  | .packages = $have + [$managed[] | select(. as $m | $have | map(src) | index($m) | not)]
+'
